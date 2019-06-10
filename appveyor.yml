@@ -1,0 +1,33 @@
+# AppVeyor version is just a placeholder. Version is retrieved from version.txt and is automatically updated on build.
+version: '0.0.0.0.{build}'
+image:
+  - Visual Studio 2017
+clone_depth: 5
+install:
+# Restore NuGet package dependencies for proper compilation
+  - cmd: nuget restore
+cache:
+# Retain NuGet packages unless configuration is updated to possibly minimize subsequent build times
+  - packages -> **\packages.config
+configuration:
+  - Debug
+  - Release
+before_build:
+# Updates the version number in the respective files and updates the AppVeyor build number to match
+  - ps: |
+      $version = Get-Content version.txt -Raw
+      .\SetVersion.ps1 $version
+      Update-AppveyorBuild -Version "$version.$env:APPVEYOR_BUILD_NUMBER"
+build:
+  parallel: true
+  project: SonarLink.sln
+  verbosity: minimal
+test:
+  assemblies:
+    - SonarLink.API.UnitTests\bin\$(configuration)\SonarLink.API.UnitTests.dll
+    - SonarLink.TE.UnitTests\bin\$(configuration)\SonarLink.TE.UnitTests.dll
+artifacts:
+  - path: SonarLink.TE\bin\$(configuration)\SonarLink.vsix
+    name: SonarLink VSIX Installer
+  - path: SonarLink.TE.2019\bin\$(configuration)\SonarLink.vsix
+    name: SonarLink VS2019 (Experimental) VSIX Installer

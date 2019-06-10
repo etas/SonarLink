@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="433534a4-5c7d-48f1-b178-80d0b2143c74" Version="1.0" Language="en-US" Publisher="ETAS" />
+        <Identity Id="433534a4-5c7d-48f1-b178-80d0b2143c74" Version="0.0.0.0" Language="en-US" Publisher="ETAS" />
         <DisplayName>SonarLink</DisplayName>
         <Description xml:space="preserve">Displays detected issues of SonarQube projects in Visual Studio.</Description>
     </Metadata>

@@ -10,7 +10,6 @@ cache:
 # Retain NuGet packages unless configuration is updated to possibly minimize subsequent build times
   - packages -> **\packages.config
 configuration:
-  - Debug
   - Release
 before_build:
 # Updates the version number in the respective files and updates the AppVeyor build number to match

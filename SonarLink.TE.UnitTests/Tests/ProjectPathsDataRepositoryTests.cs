@@ -1,9 +1,7 @@
 ﻿// (C) Copyright 2020 ETAS GmbH (http://www.etas.com/)
 
-using Moq;
 using NUnit.Framework;
-using SonarLink.TE.Utilities;
-using System;
+using SonarLink.TE.Utilities.Repository;
 using System.IO;
 using System.Reflection;
 
@@ -17,7 +15,7 @@ namespace SonarLink.TE.UnitTests.Tests
         [SetUp]
         public void TestSetup()
         {
-            DeleteTempDirectory();
+            DeleteTempFile();
         }
 
         /// <summary>
@@ -26,33 +24,33 @@ namespace SonarLink.TE.UnitTests.Tests
         [TearDown]
         public void TestTearDown()
         {
-            DeleteTempDirectory();
+            DeleteTempFile();
         }
 
         /// <summary>
-        /// Test suite temporary directroy
+        /// Test suite temporary file path
         /// </summary>
-        private readonly string TempDirectory = GetTempDirectory();
+        private readonly string TempFilePath = GetTempFilePath();
 
         /// <summary>
-        /// Get the test suite temporary directory
+        /// Get the test suite temporary file path
         /// </summary>
         /// <returns></returns>
-        private static string GetTempDirectory()
+        private static string GetTempFilePath()
         {
             var appDataFolder = Path.GetTempPath();
             var assemblyName = Assembly.GetExecutingAssembly().GetName().Name;
-            return Path.Combine(appDataFolder, assemblyName);
+            return Path.Combine(appDataFolder, assemblyName, "tempfile.json");
         }
 
         /// <summary>
-        /// Delete the temporary directory used for tests
+        /// Delete the temporary file used for tests
         /// </summary>
-        private void DeleteTempDirectory()
+        private void DeleteTempFile()
         {
-            if (Directory.Exists(TempDirectory))
+            if (File.Exists(TempFilePath))
             {
-                Directory.Delete(TempDirectory, true);
+                File.Delete(TempFilePath);
             }
         }
 
@@ -63,8 +61,8 @@ namespace SonarLink.TE.UnitTests.Tests
         [Test]
         public void JsonFileCreation()
         {
-            _ = new ProjectPathsDataRepository(TempDirectory);
-            Assert.That(Directory.GetFiles(TempDirectory, "*.json").Length, Is.EqualTo(1));
+            _ = new ProjectPathsRepository(TempFilePath);
+            Assert.That(Directory.GetFiles(Path.GetDirectoryName(TempFilePath), "*.json").Length, Is.EqualTo(1));
         }
 
         /// <summary>
@@ -74,32 +72,32 @@ namespace SonarLink.TE.UnitTests.Tests
         [Test]
         public void VerifyProjectPathsDataPersistence()
         {
-            var repository = new ProjectPathsDataRepository(TempDirectory);
+            var repository = new ProjectPathsRepository(TempFilePath);
 
-            Assert.That(repository.Data.ProjectPaths, Is.Empty);
+            Assert.That(repository.Data.ProjectToPathMap, Is.Empty);
 
-            repository.Data.ProjectPaths.Add("projectKey1", "projectPath1");
-            repository.Data.ProjectPaths.Add("projectKey2", "projectPath2");
+            repository.Data.ProjectToPathMap.Add("projectKey1", "projectPath1");
+            repository.Data.ProjectToPathMap.Add("projectKey2", "projectPath2");
 
-            Assert.That(repository.Data.ProjectPaths.Count, Is.EqualTo(2));
+            Assert.That(repository.Data.ProjectToPathMap.Count, Is.EqualTo(2));
 
-            // Presist data to JSON file
+            // Persist data to JSON file
             repository.Save();
 
             // Clear data model
-            repository.Data.ProjectPaths.Clear();
-            Assert.That(repository.Data.ProjectPaths, Is.Empty);
+            repository.Data.ProjectToPathMap.Clear();
+            Assert.That(repository.Data.ProjectToPathMap, Is.Empty);
 
             // Instantiate new repository and assert it reads
             // JSON file and populates data model
-            repository = new ProjectPathsDataRepository(TempDirectory);
-            Assert.That(repository.Data.ProjectPaths.Count, Is.EqualTo(2));
+            repository = new ProjectPathsRepository(TempFilePath);
+            Assert.That(repository.Data.ProjectToPathMap.Count, Is.EqualTo(2));
 
             // Verify content of data model
-            repository.Data.ProjectPaths.TryGetValue("projectKey1", out string path);
+            repository.Data.ProjectToPathMap.TryGetValue("projectKey1", out string path);
             Assert.That(path, Is.EqualTo("projectPath1"));
 
-            repository.Data.ProjectPaths.TryGetValue("projectKey2", out path);
+            repository.Data.ProjectToPathMap.TryGetValue("projectKey2", out path);
             Assert.That(path, Is.EqualTo("projectPath2"));
         }
     }

@@ -15,7 +15,7 @@ namespace SonarLink.TE.View
             InitializeComponent();
         }
 
-        private void ConnectButtonClick(object sender, RoutedEventArgs e)
+        private void SignInButtonClick(object sender, RoutedEventArgs e)
         {
             DialogResult = true;
         }

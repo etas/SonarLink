@@ -4,11 +4,31 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:tecontrols="clr-namespace:Microsoft.TeamFoundation.Controls.WPF.TeamExplorer;assembly=Microsoft.TeamFoundation.Controls"
+             xmlns:tfconverters="clr-namespace:Microsoft.TeamFoundation.Controls.WPF.Converters;assembly=Microsoft.TeamFoundation.Controls"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
-    <StackPanel Margin="6">
-        <tecontrols:TextLink x:Name="ConnectLink" 
-                             Text="Connect..."
-                             Command="{Binding ConnectCommand}"/>
-    </StackPanel>   
+    <UserControl.Resources>
+        <tfconverters:TrueToVisibleConverter x:Key="TrueToVisibleConverter" />
+    </UserControl.Resources>
+
+    <WrapPanel Orientation="Horizontal" Margin="6,0,0,6">
+        <tecontrols:TextLink x:Name="SignInLink" 
+                             Text="Sign in"
+                             Command="{Binding SignInCommand}"
+                             Visibility="{Binding IsSignedIn, Converter={StaticResource TrueToVisibleConverter}, ConverterParameter=Invert}" />
+
+        <tecontrols:TextLink x:Name="ViewProjectsLink" 
+                             Text="View projects"
+                             Command="{Binding ViewProjectsCommand}"
+                             Visibility="{Binding IsSignedIn, Converter={StaticResource TrueToVisibleConverter}}" />
+
+        <Separator Margin="3,0,3,0" 
+                   Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"
+                   Visibility="{Binding IsSignedIn, Converter={StaticResource TrueToVisibleConverter}}" />
+        
+        <tecontrols:TextLink x:Name="SignOutLink" 
+                             Text="Sign out"
+                             Command="{Binding SignOutCommand}"
+                             Visibility="{Binding IsSignedIn, Converter={StaticResource TrueToVisibleConverter}}" />
+    </WrapPanel>   
 </UserControl>

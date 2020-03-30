@@ -90,8 +90,8 @@ namespace SonarLink.TE.UnitTests.Tests
         /// </summary>
         /// <param name="value">password</param>
         /// <returns>true if the password hint should be shown, false otherwise</returns>
-        [TestCase("password", Result = false)]
-        [TestCase(null, Result = true)]
+        [TestCase("password", ExpectedResult = false)]
+        [TestCase(null, ExpectedResult = true)]
         public bool ShowPasswordHint(string value)
         {
             Model.Password = value;

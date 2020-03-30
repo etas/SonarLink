@@ -1,22 +1,27 @@
 ﻿// (C) Copyright 2020 ETAS GmbH (http://www.etas.com/)
 
+using SonarLink.TE.Utilities.Repository;
+using System.ComponentModel.Composition;
+
 namespace SonarLink.TE.Utilities
 {
     /// <summary>
     /// Implementation of IProjectPathsManager
     /// </summary>
+    [Export(typeof(IProjectPathsManager))]
+    [PartCreationPolicy(CreationPolicy.Shared)]
     public sealed class ProjectPathsManager : IProjectPathsManager
     {
         /// <summary>
         /// Repository for persisting the project paths data
         /// </summary>
-        private readonly IProjectPathsDataRepository _repository;
+        private readonly IRepository<ProjectPathsRepositoryItem> _repository;
 
         /// <summary>
         /// Default constructor
         /// </summary>
         public ProjectPathsManager() :
-            this(new ProjectPathsDataRepository())
+            this(new ProjectPathsRepository())
         {
         }
 
@@ -24,7 +29,7 @@ namespace SonarLink.TE.Utilities
         /// Constructor
         /// </summary>
         /// <param name="repository">Repository for persisting the project paths data</param>
-        internal ProjectPathsManager(IProjectPathsDataRepository repository)
+        internal ProjectPathsManager(IRepository<ProjectPathsRepositoryItem> repository)
         {
             _repository = repository;
         }
@@ -41,7 +46,7 @@ namespace SonarLink.TE.Utilities
                 return;
             }
 
-            _repository.Data.ProjectPaths[project] = path;
+            _repository.Data.ProjectToPathMap[project] = path;
             _repository.Save();
         }
 
@@ -49,17 +54,18 @@ namespace SonarLink.TE.Utilities
         /// Gets the value associated with the specified key.
         /// </summary>
         /// <param name="project">Unique key associated with the Sonar project</param>
-        /// <param name="path">Local hint path associated with the spcified key, if the latter is found</param>
-        public void TryGetvalue(string project, out string path)
+        /// <param name="path">Local hint path associated with the specified key, if the latter is found</param>
+        /// <returns>Retures true if key exists, false otherwise.</returns>
+        public bool TryGetValue(string project, out string path)
         {
             path = null;
 
-            if (string.IsNullOrEmpty(project))
+            if (string.IsNullOrEmpty(project) || _repository.Data.ProjectToPathMap is null)
             {
-                return;
+                return false;
             }
 
-            _repository.Data.ProjectPaths?.TryGetValue(project, out path);
+            return _repository.Data.ProjectToPathMap.TryGetValue(project, out path);
         }
     }
 }

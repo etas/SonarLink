@@ -9,10 +9,10 @@ using System.Drawing;
 using SonarLink.TE.Model;
 using SonarLink.TE.MVVM;
 using System.Linq;
+using SonarLink.TE.Utilities.CredentialsManager;
 
 namespace SonarLink.TE
 {
-
     /// <summary>
     /// Button/Item displayed in the 'Team Explorer' home page for SonarLink.
     /// Allows user to navigate to their last connected SonarQube instance.
@@ -21,58 +21,35 @@ namespace SonarLink.TE
     public class SonarLinkTeamExplorerNavigationItem : NotifyPropertyChangeSource, ITeamExplorerNavigationItem2
     {
         /// <summary>
-        /// Constructor
+        /// Visual Studio Team Explorer service.
         /// </summary>
-        /// <param name="serviceProvider">Visual Studio service provider</param>
-        /// <param name="manager">SonarQube connection cache/manager</param>
+        readonly ITeamExplorer _teamExplorer;
+
+        /// <summary>
+        /// Manages the configured <see cref="ISonarQubeClient"/> instances.
+        /// </summary>
+        readonly IClientManager _clientManager;
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="serviceProvider">Visual Studio service provider.</param>
+        /// <param name="clientManager">Manages the configured <see cref="ISonarQubeClient"/> instances.</param>
         [ImportingConstructor]
-        public SonarLinkTeamExplorerNavigationItem([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider, IConnectionManager manager)
+        public SonarLinkTeamExplorerNavigationItem([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider, IClientManager clientManager)
         {
             var service = serviceProvider.GetService(typeof(ITeamExplorer));
             if (service != null)
             {
-                TeamExplorer = service as ITeamExplorer;
+                _teamExplorer = service as ITeamExplorer;
             }
-            
-            ConnectionManager = manager;
-            IsVisible = ConnectionManager.Connections.Count > 0;
-    
-            ConnectionManager.CollectionChanged += ConnectionManager_CollectionChanged;
+
+            _clientManager = clientManager;
         }
-    
-        /// <summary>
-        /// Visual Studio Team Explorer service
-        /// </summary>
-        public ITeamExplorer TeamExplorer { get; private set; }
-    
-        /// <summary>
-        /// SonarQube connection cache/manager
-        /// </summary>
-        public IConnectionManager ConnectionManager { get; set; }
     
         #region ITeamExplorerNavigationItem2
     
-        /// <summary>
-        /// Visibility status
-        /// </summary>
-        private bool visible = false;
-    
-        public bool IsVisible
-        {
-            get
-            {
-                return visible;
-            }
-    
-            set
-            {
-                if (visible != value)
-                {
-                    visible = value;
-                    RaisePropertyChanged();
-                }
-            }
-        }
+        public bool IsVisible => (_clientManager.Clients.Count > 0);
 
         public int ArgbColor => 0;
 
@@ -86,9 +63,9 @@ namespace SonarLink.TE
 
         public void Execute()
         {
-            TeamExplorer.NavigateToPage(new Guid(SonarLinkProjectPage.PageId), new SonarLinkProjectPage.PageContext()
+            _teamExplorer.NavigateToPage(new Guid(SonarLinkProjectPage.PageId), new SonarLinkProjectPage.PageContext()
             {
-                Service = ConnectionManager.Connections.LastOrDefault(),
+                Client = _clientManager.Clients.LastOrDefault(),
                 Filter = string.Empty
             });
         }
@@ -96,40 +73,29 @@ namespace SonarLink.TE
         public void Invalidate()
         {
         }
-    
+
         #endregion
-    
-        /// <summary>
-        /// Event handler to react to SonarQube connection additions/removals
-        /// </summary>
-        /// <param name="sender">Event source (assumed to be ConnectionManager)</param>
-        /// <param name="e">Event arguments</param>
-        private void ConnectionManager_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-        {
-            IsVisible = ConnectionManager.Connections.Count > 0;
-        }
-    
+
         #region IDisposable Support
-    
+
         private bool disposedValue = false;
-    
+
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
             {
                 if (disposing)
                 {
-                    ConnectionManager.CollectionChanged -= ConnectionManager_CollectionChanged;
                 }
-    
+
                 disposedValue = true;
             }
         }
-    
+
         public void Dispose()
         {
+            Dispose(true);
         }
-    
         #endregion
     }
 }

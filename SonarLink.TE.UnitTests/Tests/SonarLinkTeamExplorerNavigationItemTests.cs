@@ -3,10 +3,11 @@
 using Microsoft.TeamFoundation.Controls;
 using Moq;
 using NUnit.Framework;
-using SonarLink.API.Services;
+using SonarLink.API.Clients;
 using SonarLink.TE.Model;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 
 namespace SonarLink.TE.UnitTests.Tests
@@ -18,22 +19,19 @@ namespace SonarLink.TE.UnitTests.Tests
         public void TestSetup()
         {
             var explorer = new Mock<ITeamExplorer>();
-
             var services = new Mock<IServiceProvider>();
 
             services.
                 Setup(i => i.GetService(It.Is<Type>(type => type == typeof(ITeamExplorer)))).
                 Returns(explorer.Object);
 
-            Connections = new ConnectionManager();
-            NavigationItem = new SonarLinkTeamExplorerNavigationItem(services.Object, Connections);
+            ClientManager = new Mock<IClientManager>();
+            ClientManager.SetupGet(i => i.Clients).Returns(new Collection<ISonarQubeClient>());
+
+            NavigationItem = new SonarLinkTeamExplorerNavigationItem(services.Object, ClientManager.Object);
 
             // Bootstrap the instance similar to what Visual Studio does
             NavigationItem.Invalidate();
-
-            Events = new List<PropertyChangedEventArgs>();
-
-            NavigationItem.PropertyChanged += (sender, e) => Events.Add(e);
         }
 
         [TearDown]
@@ -44,48 +42,42 @@ namespace SonarLink.TE.UnitTests.Tests
 
         public SonarLinkTeamExplorerNavigationItem NavigationItem { get; private set; }
 
-        public IConnectionManager Connections { get; private set; }
-
-        public IList<PropertyChangedEventArgs> Events { get; private set; }
+        public Mock<IClientManager> ClientManager { get; private set; }
 
         /// <summary>
-        /// Assert that: When no connections are available, the navigation item is not visible
+        /// Assert that: When client is not signed in, the navigation item is not visible
         /// </summary>
         [Test]
-        public void NotVisibleWhenDisconnected()
+        public void NotVisibleNoClientsAreSignedIn()
         {
-            Assert.That(Connections.Connections.Count, Is.EqualTo(0));
+            Assert.That(ClientManager.Object.Clients.Count, Is.EqualTo(0));
             Assert.That(NavigationItem.IsVisible, Is.False);
         }
 
         /// <summary>
-        /// Assert that: When connections are available, the navigation item is visible
+        /// Assert that: When client is signed in, the navigation item is visible
         /// </summary>
         [Test]
-        public void VisibleWhenConnected()
+        public void VisibleClientIsSignedIn()
         {
-            var service = new Mock<ISonarQubeService>();
-            Connections.Connections.Add(service.Object);
+            var client = new Mock<ISonarQubeClient>();
 
-            Assert.That(Events.Count, Is.GreaterThan(0));
+            ClientManager.Object.Clients.Add(client.Object);
             Assert.That(NavigationItem.IsVisible, Is.True);
         }
 
         /// <summary>
-        /// Assert that: When connections are disconnected, the navigation item is not visible
+        /// Assert that: When all client signs out, the navigation item is not visible
         /// </summary>
         [Test]
-        public void NotVisibleAfterDisconnectedConnection()
+        public void NotVisibleAfterClientSignsOut()
         {
-            var service = new Mock<ISonarQubeService>();
-            Connections.Connections.Add(service.Object);
+            var client = new Mock<ISonarQubeClient>();
 
-            Assert.That(Events.Count, Is.GreaterThan(0));
+            ClientManager.Object.Clients.Add(client.Object);
             Assert.That(NavigationItem.IsVisible, Is.True);
 
-            Connections.Connections.Remove(service.Object);
-
-            Assert.That(Events.Count, Is.GreaterThan(1));
+            ClientManager.Object.Clients.Remove(client.Object);
             Assert.That(NavigationItem.IsVisible, Is.False);
         }
     }

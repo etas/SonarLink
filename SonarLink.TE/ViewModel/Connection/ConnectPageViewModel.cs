@@ -2,112 +2,193 @@
 
 using Microsoft.TeamFoundation.Controls;
 using SonarLink.API.Models;
-using SonarLink.API.Services;
 using SonarLink.TE.MVVM;
 using SonarLink.TE.Model;
 using SonarLink.TE.ViewModel.Connection;
 using System;
 using System.Windows.Input;
 using System.Threading.Tasks;
+using SonarLink.API.Clients;
+using System.Linq;
 
 namespace SonarLink.TE.ViewModel
 {
     /// <summary>
-    /// ViewModel for SonarQube connection page
+    /// ViewModel for SonarQube connection page.
     /// </summary>
     public class ConnectPageViewModel : NotifyPropertyChangeSource
     {
         /// <summary>
-        /// Connection notification ID
+        /// Connection notification ID.
         /// </summary>
-        private static readonly Guid ConnectionNotificationId = new Guid();
+        static readonly Guid ConnectionNotificationId = new Guid();
 
         /// <summary>
-        /// Indicates whether an attempt to establish a connection is ongoing.
+        /// Visual Studio Team Explorer service.
         /// </summary>
-        private bool _isAttemptingToConnect = false;
+        readonly ITeamExplorer _teamExplorer;
 
-        public ConnectPageViewModel(ITeamExplorer explorer, IConnectionManager manager)
+        /// <summary>
+        /// Manages the configured <see cref="ISonarQubeClient"/> instances.
+        /// </summary>
+        readonly IClientManager _clientManager;
+
+        /// <summary>
+        /// Indicates whether an attempt to sign in is ongoing.
+        /// </summary>
+        bool _isSigningIn = false;
+
+        /// <summary>
+        /// Indicates whether a client is signed in.
+        /// </summary>
+        bool _isSignedIn = false;
+
+        /// <summary>
+        /// Server URL and user credentials used for the last failed sign in attempt.
+        /// </summary>
+        ConnectionInformation _lastAttemptedSignIn;
+
+        /// <summary>,
+        /// Constructor.
+        /// </summary>
+        /// <param name="teamExplorer">TeamExplorer VS service.</param>
+        /// <param name="clientManager">Manages the configured <see cref="ISonarQubeClient"/> instances.</param>
+        public ConnectPageViewModel(ITeamExplorer explorer, IClientManager clientManager)
         {
-            TeamExplorer = explorer;
-            ConnectionManager = manager;
+            _teamExplorer = explorer;
+            _clientManager = clientManager;
 
-            ConnectCommand = new AsyncCommand(OnConnectAsync);
+            IsSignedIn = (clientManager.Clients.Count > 0);
+
+            SignInCommand = new AsyncCommand(OnSignInAsync);
+            ViewProjectsCommand = new Command(OnViewProjects);
+            SignOutCommand = new Command(OnSignOut);
         }
 
-        private ConnectionInformation LastAttemptedConnection { get; set; }
-
-        public IConnectionManager ConnectionManager { get; private set; }
-
-        public ICommand ConnectCommand { get; }
-
-        public ITeamExplorer TeamExplorer { get; private set; }
+        /// <summary>
+        /// Command for signing in to a SonarQube server.
+        /// </summary>
+        public ICommand SignInCommand { get; }
 
         /// <summary>
-        /// Indicates whether an attempt to establish a connection is ongoing.
+        /// Command to switch to projects view.
         /// </summary>
-        public bool IsAttemptingToConnect
+        public ICommand ViewProjectsCommand { get; }
+
+        /// <summary>
+        /// Command to sign out of a SonarQube server.
+        /// </summary>
+        public ICommand SignOutCommand { get; }
+
+        /// <summary>
+        /// Indicates whether an attempt to sign in is ongoing.
+        /// </summary>
+        public bool IsSigningIn
         {
             get
             {
-                return _isAttemptingToConnect;
+                return _isSigningIn;
             }
 
             set
             {
-                if (_isAttemptingToConnect != value)
+                if (_isSigningIn != value)
                 {
-                    _isAttemptingToConnect = value;
+                    _isSigningIn = value;
                     RaisePropertyChanged();
                 }
             }
         }
 
-        private async Task OnConnectAsync(object parameter)
+        /// <summary>
+        /// Indicates whether a client is signed in.
+        /// </summary>
+        public bool IsSignedIn
         {
-            var connectionInfo = ConnectionInformationDialog.ShowDialog(LastAttemptedConnection);
-            if (connectionInfo != null)
+            get
             {
-                LastAttemptedConnection = connectionInfo;
+                return _isSignedIn;
+            }
 
-                SonarQubeService service = null;
-                bool connected = false;
-
-                IsAttemptingToConnect = true;
-
-                try
+            set
+            {
+                if (_isSignedIn != value)
                 {
-                    service = new SonarQubeService();
-                    connected = await service.ConnectAsync(LastAttemptedConnection);
-                }
-                catch
-                {
-                    connected = false;
-                }
-
-                IsAttemptingToConnect = false;
-
-                if (connected)
-                {
-                    // This ViewModel/Controller only supports 1 connection
-                    ConnectionManager.Connections.Clear();
-
-                    ConnectionManager.Connections.Add(service);
-
-                    TeamExplorer.HideNotification(ConnectionNotificationId);
-
-                    TeamExplorer.NavigateToPage(new Guid(SonarLinkProjectPage.PageId), new SonarLinkProjectPage.PageContext()
-                    {
-                        Service = service,
-                        Filter = string.Empty
-                    });
-                }
-                else
-                {
-                    TeamExplorer.ShowNotification($"Could not connect to \"{connectionInfo.ServerUrl}\".",
-                                                  NotificationType.Error, NotificationFlags.None, null, ConnectionNotificationId);
+                    _isSignedIn = value;
+                    RaisePropertyChanged();
                 }
             }
+        }
+
+        /// <summary>
+        /// Handler which attempts to sign in to a SonarQube server.
+        /// </summary>
+        private async Task OnSignInAsync(object parameter)
+        {
+            var connectionInfo = ConnectionInformationDialog.ShowDialog(_lastAttemptedSignIn);
+            if (connectionInfo is null)
+            {
+                return;
+            }
+
+            _lastAttemptedSignIn = connectionInfo;
+            ISonarQubeClient client = null;
+
+            IsSignedIn = false;
+            IsSigningIn = true;
+
+            try
+            {
+                client = await _clientManager.LogInAsync(new Uri(connectionInfo.ServerUrl), connectionInfo.Login, connectionInfo.Password);
+                IsSignedIn = (null != client);
+            }
+            catch
+            {
+                IsSignedIn = false;
+            }
+
+            IsSigningIn = false;
+
+            if (IsSignedIn)
+            {
+                _teamExplorer.HideNotification(ConnectionNotificationId);
+                NavigateToProjectPage(client);
+            }
+            else
+            {
+                _teamExplorer.ShowNotification($"Could not connect to \"{connectionInfo.ServerUrl}\".",
+                    NotificationType.Error, NotificationFlags.None, null, ConnectionNotificationId);
+            }
+        }
+
+        /// <summary>
+        /// Handler which navigates to the project view page.
+        /// </summary>
+        private void OnViewProjects(object parameter)
+        {
+            NavigateToProjectPage(_clientManager.Clients.LastOrDefault());
+        }
+
+        /// <summary>
+        /// Handler which signs out of a SonarQube server.
+        /// </summary>
+        private void OnSignOut(object parameter)
+        {
+            _clientManager.LogOut();
+            IsSignedIn = false;
+        }
+
+        /// <summary>
+        /// Navigates to the project view page.
+        /// </summary>
+        /// <param name="client">Client for the SonarQube API.</param>
+        private void NavigateToProjectPage(ISonarQubeClient client)
+        {
+            _teamExplorer.NavigateToPage(new Guid(SonarLinkProjectPage.PageId), new SonarLinkProjectPage.PageContext()
+            {
+                Client = client,
+                Filter = string.Empty
+            });
         }
     }
 }

@@ -16,7 +16,8 @@ namespace SonarLink.API.Requests
         /// <inheritdoc />
         protected override bool ParseResponse(IRestResponse response)
         {
-            return new JsonDeserializer().Deserialize<ValidateCredentialsResponse>(response).Valid;
+            var result = new JsonDeserializer().Deserialize<ValidateCredentialsResponse>(response).Valid;
+            return result;
         }
     
         /// <summary>

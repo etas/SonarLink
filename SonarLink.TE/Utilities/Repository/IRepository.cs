@@ -3,17 +3,17 @@
 namespace SonarLink.TE.Utilities
 {
     /// <summary>
-    /// Interface of a repository for persisting the project paths data
+    /// Interface of a repository for loading and saving data
     /// </summary>
-    public interface IProjectPathsDataRepository
+    public interface IRepository<T>
     {
         /// <summary>
-        /// Sonar projects and local path associations
+        /// POCO data model 
         /// </summary>
-        ProjectPathData Data { get; }
+        T Data { get; }
 
         /// <summary>
-        /// Persist project paths data
+        /// Persist data
         /// </summary>
         void Save();
     }

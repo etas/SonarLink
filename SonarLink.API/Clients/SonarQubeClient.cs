@@ -18,7 +18,7 @@ namespace SonarLink.API.Clients
         /// <summary>
         /// Initializes a new instance of the SonarQube API client.
         /// </summary>
-        /// <param name="baseUrl">The base address for the SonarQube API</param>
+        /// <param name="baseUrl">The base address for the SonarQube API.</param>
         public SonarQubeClient(Uri baseUrl) :
             this(new RestClient())
         {
@@ -37,6 +37,11 @@ namespace SonarLink.API.Clients
             Components = new ComponentsClient(_restClient);
             Issues = new IssuesClient(_restClient);
         }
+
+        /// <summary>
+        /// The base address for the SonarQube API.
+        /// </summary>
+        public Uri SonarQubeApiUrl => _restClient?.BaseUrl;
 
         /// <summary>
         /// Access SonarQube's Authentication API.

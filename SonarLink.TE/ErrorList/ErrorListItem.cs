@@ -10,94 +10,94 @@ namespace SonarLink.TE.ErrorList
 {
 
     /// <summary>
-    /// Item in 'Error List' window for a SonarQube issue
+    /// Item in 'Error List' window for a SonarQube issue.
     /// </summary>
     public class ErrorListItem
     {
         /// <summary>
-        /// Default constructor
+        /// Default constructor.
         /// </summary>
         public ErrorListItem()
         {
         }
-    
+
         /// <summary>
-        /// Constructor
+        /// Constructor.
         /// </summary>
-        /// <param name="service">SonarQube source from which this issue originates</param>
-        /// <param name="issue">SonarQube issue</param>
+        /// <param name="service">SonarQube source from which this issue originates.</param>
+        /// <param name="issue">SonarQube issue.</param>
         public ErrorListItem(Uri baseUrl, SonarQubeIssue issue)
             : this()
         {
             var errorCode = GetErrorCode(issue.Rule);
-    
+
             ProjectName = string.Empty;
             FileName = GetFileName(issue.Component);
-    
-            // Visual Studio expects line to be 0-based rather than 1-based like SonarQube
+
+            // Visual Studio expects line to be 0-based rather than 1-based like SonarQube.
             // Reference: https://docs.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.shell.tablemanager.standardtablekeynames.line?view=visualstudiosdk-2017
             Line = issue.Line - 1;
-    
+
             Message = GetErrorMessage(issue.Message);
             ErrorCode = errorCode;
             ErrorCodeToolTip = GetErrorCodeToolTip(errorCode);
             ErrorCategory = GetErrorCategory(issue.Severity, issue.Type);
-            Severity = __VSERRORCATEGORY.EC_MESSAGE;
+            Severity = GetErrorSeverity(issue.Severity, issue.Type);
             HelpLink = GetHelpLink(baseUrl, issue.Rule);
         }
-    
+
         /// <summary>
-        /// Project name of the error item
+        /// Project name of the error item.
         /// </summary>
         public string ProjectName { get; set; }
-    
+
         /// <summary>
-        /// File name of the error item
+        /// File name of the error item.
         /// </summary>
         public string FileName { get; set; }
-    
+
         /// <summary>
-        /// 0-based line of code on the error item
+        /// 0-based line of code on the error item.
         /// </summary>
         public int Line { get; set; }
-    
+
         /// <summary>
-        /// Error message
+        /// Error message.
         /// </summary>
         public string Message { get; set; }
-    
+
         /// <summary>
-        /// Error code for the error item
+        /// Error code for the error item.
         /// </summary>
         public string ErrorCode { get; set; }
-    
+
         /// <summary>
-        /// Error code tool tip
+        /// Error code tool tip.
         /// </summary>
         public string ErrorCodeToolTip { get; set; }
-    
+
         /// <summary>
-        /// Error category
+        /// Error category.
         /// </summary>
         public string ErrorCategory { get; set; }
-    
+
         /// <summary>
-        /// Severity of the error item
+        /// Severity of the error item.
         /// </summary>
         public __VSERRORCATEGORY Severity { get; set; }
-    
+
         /// <summary>
-        /// Error help link
+        /// Error help link.
         /// </summary>
         public string HelpLink { get; set; }
-    
+
         #region Static helpers
-    
+
         /// <summary>
-        /// Identifies the filename portion from the respective SonarQube component field
+        /// Identifies the filename portion from the respective SonarQube component field.
         /// </summary>
-        /// <param name="fileName">SonarQube component field from an issue response</param>
-        /// <returns>File name to which the SonarQube issue is attributed to</returns>
+        /// <param name="fileName">SonarQube component field from an issue response.</param>
+        /// <returns>File name to which the SonarQube issue is attributed to.</returns>
         private static string GetFileName(string fileName)
         {
             var cleanFileName = fileName.Split(':').LastOrDefault();
@@ -105,53 +105,75 @@ namespace SonarLink.TE.ErrorList
         }
 
         /// <summary>
-        /// Identifies the error message component from a SonarQube error message serialization
+        /// Identifies the error message component from a SonarQube error message serialization.
         /// </summary>
-        /// <param name="message">SonarQube error message</param>
-        /// <returns>Error message suitable for listing in 'Error List' window</returns>
+        /// <param name="message">SonarQube error message.</param>
+        /// <returns>Error message suitable for listing in 'Error List' window.</returns>
         private static string GetErrorMessage(string message)
         {
             if (message.Contains("QACPP"))
             {
-                var colonIndex = message.IndexOf(']');
-                return message.Substring(colonIndex + 3);
+                var msgIndex = message.IndexOf(']') + 1;
+                return message.Substring(msgIndex).Trim();
             }
-    
+
             if (message.Contains("warning"))
             {
-                var colonIndex = message.IndexOf(':');
-                return message.Substring(colonIndex + 3);
+                var msgIndex = message.IndexOf(':') + 1;
+                return message.Substring(msgIndex).Trim();
             }
-    
+
             return message;
         }
 
         /// <summary>
-        /// Identifies the respective Visual Studio error category for the SonarQube issue
+        /// Identifies the respective Visual Studio error category for the SonarQube issue.
         /// </summary>
-        /// <param name="severity">SonarQube issue severty</param>
-        /// <param name="type">SonarQube issue type</param>
+        /// <param name="severity">SonarQube issue severity.</param>
+        /// <param name="type">SonarQube issue type.</param>
         /// <returns></returns>
         private static string GetErrorCategory(string severity, string type)
         {
             var errorCategory = string.Empty;
             var textInfo = CultureInfo.CurrentCulture.TextInfo;
-    
+
             if (!severity.Contains("INFO"))
             {
                 errorCategory += textInfo.ToTitleCase(severity.ToLower()) + ' ';
             }
-    
+
             errorCategory += textInfo.ToTitleCase(type.ToLower()).Replace('_', ' ');
-    
+
             return errorCategory;
         }
 
         /// <summary>
-        /// (Attempts to) Map an error code for the provided rule
+        /// Identifies the respective Visual Studio error severity for the SonarQube issue.
         /// </summary>
-        /// <param name="rule">SonarQube (violated) rule</param>
-        /// <returns>Error code for the provided rule</returns>
+        /// <param name="severity">SonarQube issue severity.</param>
+        /// <param name="type">SonarQube issue type.</param>
+        /// <returns></returns>
+        private static __VSERRORCATEGORY GetErrorSeverity(string severity, string type)
+        {
+            var errorSeverity = __VSERRORCATEGORY.EC_ERROR;
+
+            if (severity.Contains("INFO"))
+            {
+                errorSeverity = __VSERRORCATEGORY.EC_MESSAGE;
+            }
+            else if (type.Contains("CODE_SMELL"))
+            {
+                errorSeverity = __VSERRORCATEGORY.EC_WARNING;
+            }
+
+            return errorSeverity;
+        }
+
+        /// <summary>
+        /// (Attempts to) Map an error code for the provided rule.
+        /// </summary>
+        /// <param name="rule">SonarQube (violated) rule.</param>
+        /// <returns>Error code for the provided rule.</returns>
         private static string GetErrorCode(string rule)
         {
             if (rule.Any(char.IsDigit))
@@ -160,31 +182,32 @@ namespace SonarLink.TE.ErrorList
                 var ruleId = rule.Substring(colonIndex + 1);
                 return ruleId.Replace(".", "");
             }
-    
+
             return string.Empty;
         }
 
         /// <summary>
-        /// Identifies the URL for for the SonarQube rule relative to the origin SonarQube server
+        /// Identifies the URL for for the SonarQube rule relative to the origin SonarQube server.
         /// </summary>
-        /// <param name="baseUrl">Base SonarQube server URL</param>
-        /// <param name="rule">SonarQube (error) rule</param>
-        /// <returns>URL for for the SonarQube rule</returns>
+        /// <param name="baseUrl">Base SonarQube server URL.</param>
+        /// <param name="rule">SonarQube (error) rule.</param>
+        /// <returns>URL for for the SonarQube rule.</returns>
         private static string GetHelpLink(Uri baseUrl, string rule)
         {
-            var builder = new UriBuilder(baseUrl);
-    
-            builder.Path = "coding_rules";
-            builder.Fragment = $"rule_key={Uri.EscapeDataString(rule)}";
-    
+            var builder = new UriBuilder(baseUrl)
+            {
+                Path = "coding_rules",
+                Fragment = $"rule_key={Uri.EscapeDataString(rule)}"
+            };
+
             return builder.ToString();
         }
 
         /// <summary>
-        /// Default 'Error List' item tooltip text for error hyperlink
+        /// Default 'Error List' item tooltip text for error hyperlink.
         /// </summary>
-        /// <param name="errorCode">Associated error code to SonarQube error</param>
-        /// <returns>tooltip text for error hyperlink</returns>
+        /// <param name="errorCode">Associated error code to SonarQube error.</param>
+        /// <returns>tooltip text for error hyperlink.</returns>
         private static string GetErrorCodeToolTip(string errorCode)
         {
             return $"Get help for '{errorCode}'";

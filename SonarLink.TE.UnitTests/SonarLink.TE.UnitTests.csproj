@@ -45,6 +45,7 @@
     <Compile Include="Tests\ClientManagerTests.cs" />
     <Compile Include="Tests\ConnectionInfoDialogViewModelTests.cs" />
     <Compile Include="Tests\DirectorySearcherTests.cs" />
+    <Compile Include="Tests\IssueCategoriesTests.cs" />
     <Compile Include="Tests\ProjectPathsDataRepositoryTests.cs" />
     <Compile Include="Tests\ProjectPathsManagerTests.cs" />
     <Compile Include="Tests\ProjectViewModelTests.cs" />
@@ -53,6 +54,7 @@
     <Compile Include="Tests\TableDataSourceTests.cs" />
     <Compile Include="Tests\TableEntriesSnapshotTests.cs" />
     <Compile Include="Tests\ErrorListProviderTests.cs" />
+    <Compile Include="Utilities\ErrorListItemComparer.cs" />
     <Compile Include="Utilities\InMemoryCredentialManager.cs" />
     <Compile Include="Utilities\InMemoryUriRepository.cs" />
     <Compile Include="Utilities\TemporaryFile.cs" />

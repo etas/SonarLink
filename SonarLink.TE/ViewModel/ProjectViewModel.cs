@@ -42,11 +42,11 @@ namespace SonarLink.TE.ViewModel
         /// ErrorList window provider
         /// </summary>
         private ErrorListProvider _errorListProvider;
-    
+
         /// <summary>
-        /// Cache of Sonar projects source code and local path associations
+        /// Manages access to and persistence of the Sonar projects and local path associatons
         /// </summary>
-        private Dictionary<string, string> _localPathToProjectMapping = new Dictionary<string, string>();
+        private readonly ProjectPathsManager _projectPathsManager = new ProjectPathsManager();
     
         /// <summary>
         /// Command for associating Sonar project source code to a local path
@@ -70,7 +70,7 @@ namespace SonarLink.TE.ViewModel
     
             // Bootstrap the projects view with an empty collection
             SonarProjects = Enumerable.Empty<SonarQubeProject>();
-    
+
             FolderSelectCommand = new AsyncCommand(param => OnFolderSelectAsync((SonarQubeProject) param));
             ItemSelectCommand = new AsyncCommand(param => OnItemSelectAsync((SonarQubeProject) param));
         }
@@ -208,7 +208,7 @@ namespace SonarLink.TE.ViewModel
 
             if (!string.IsNullOrEmpty(path))
             {
-                _localPathToProjectMapping[project.Key] = path;
+                _projectPathsManager.Add(project.Key, path);
 
                 // 'Set Local Path' implies 'View Issues' if the
                 // project has already had its issues loaded
@@ -228,8 +228,7 @@ namespace SonarLink.TE.ViewModel
         /// <returns>Awaitable task which enumerates associated errors</returns>
         private async Task OnItemSelectAsync(SonarQubeProject project)
         {
-            string projectLocalPath = null;
-            _localPathToProjectMapping.TryGetValue(project.Key, out projectLocalPath);
+            _projectPathsManager.TryGetvalue(project.Key, out string projectLocalPath);
     
             var errors = Enumerable.Empty<ErrorListItem>();
     

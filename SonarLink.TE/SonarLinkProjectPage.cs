@@ -4,18 +4,16 @@ using Microsoft.TeamFoundation.Controls;
 using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.TableManager;
-using SonarLink.API.Services;
 using SonarLink.TE.MVVM;
-using SonarLink.TE.Model;
 using SonarLink.TE.View;
 using System;
 using System.ComponentModel.Composition;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.VisualStudio.Threading;
 using System.Windows.Input;
 using SonarLink.TE.ViewModel;
 using SonarLink.TE.ErrorList;
+using SonarLink.API.Clients;
+using SonarLink.TE.Utilities;
 
 namespace SonarLink.TE
 {
@@ -34,13 +32,13 @@ namespace SonarLink.TE
         /// Constructor
         /// </summary>
         /// <param name="serviceProvider">Visual Studio service provider</param>
-        /// <param name="connections">(Shared) SonarQube connection cache/manager</param>
         /// <param name="issues">(Shared) SonarQube error list cache</param>
+        /// <param name="projectPathsManager">(Shared) Project paths manager</param>
         [ImportingConstructor]
-        public SonarLinkProjectPage([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider, IConnectionManager connections, SonarLinkIssueDataSource issues)
+        public SonarLinkProjectPage([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider, 
+                                    SonarLinkIssueDataSource issues,
+                                    IProjectPathsManager projectPathsManager)
         {
-            ConnectionManager = connections;
-    
             var service = serviceProvider.GetService(typeof(ITeamExplorer));
             if (service != null)
             {
@@ -52,7 +50,7 @@ namespace SonarLink.TE
 
             PageContent = new ProjectView()
             {
-                DataContext = new ProjectViewModel(TeamExplorer, issues)
+                DataContext = new ProjectViewModel(TeamExplorer, issues, projectPathsManager)
             };
     
             ViewModel.ItemSelectCommand.CanExecuteChanged += ItemSelectCommand_CanExecuteChanged;
@@ -77,12 +75,7 @@ namespace SonarLink.TE
         /// Team explorer services
         /// </summary>
         private ITeamExplorer TeamExplorer { get; set; }
-    
-        /// <summary>
-        /// ConnectionManager (shared) instance
-        /// </summary>
-        private IConnectionManager ConnectionManager { get; set; }
-    
+       
         /// <summary>
         /// Utility accessor to the underlying View
         /// </summary>
@@ -152,19 +145,17 @@ namespace SonarLink.TE
     
         public void Initialize(object sender, PageInitializeEventArgs e)
         {
-            var context = e.Context as PageContext;
-    
-            if (context == null)
+            if (!(e.Context is PageContext context))
             {
                 // Bootstrap the ViewModel with a 'default' context
                 context = new PageContext()
                 {
-                    Service = ConnectionManager.Connections.LastOrDefault(),
+                    Client = null,
                     Filter = string.Empty
                 };
             }
-    
-            ViewModel.Service = context.Service;
+
+            ViewModel.Client = context.Client;
             ViewModel.Filter = context.Filter;
     
             // Trigger a refresh to force the service to enumerate projects
@@ -195,7 +186,7 @@ namespace SonarLink.TE
         {
             e.Context = new PageContext()
             {
-                Service = ViewModel.Service,
+                Client = ViewModel.Client,
                 Filter = ViewModel.Filter ?? string.Empty
             };
         }
@@ -222,7 +213,7 @@ namespace SonarLink.TE
                 // to access the View's ViewModel without issues
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                TeamExplorer.ShowNotification($"Could not load projects from \"{ViewModel.Service.BaseUrl}\".",
+                TeamExplorer.ShowNotification("Failed to load projects.",
                             NotificationType.Error, NotificationFlags.None, null, ProjectLoadNotificationId);
             }
             finally
@@ -255,10 +246,10 @@ namespace SonarLink.TE
         internal class PageContext
         {
             /// <summary>
-            /// Associated SonarQube service/connection
+            /// A client for the SonarQube API.
             /// </summary>
-            public ISonarQubeService Service { get; set; }
-    
+            public ISonarQubeClient Client { get; set; }
+
             /// <summary>
             /// Project filter
             /// </summary>

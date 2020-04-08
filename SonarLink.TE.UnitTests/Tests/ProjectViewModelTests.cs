@@ -1,12 +1,12 @@
 ﻿// (C) Copyright 2018 ETAS GmbH (http://www.etas.com/)
 
 using Microsoft.TeamFoundation.Controls;
-using Microsoft.VisualStudio.Shell.TableManager;
 using Moq;
 using NUnit.Framework;
+using SonarLink.API.Clients;
 using SonarLink.API.Models;
-using SonarLink.API.Services;
 using SonarLink.TE.ErrorList;
+using SonarLink.TE.Utilities;
 using SonarLink.TE.ViewModel;
 using System;
 using System.Collections.Generic;
@@ -25,32 +25,17 @@ namespace SonarLink.TE.UnitTests.Tests
         public void TestSetup()
         {
             var teamExplorer = new Mock<ITeamExplorer>();
-            var service = new Mock<ISonarQubeService>();
+            var projectPathsManager = new Mock<IProjectPathsManager>();
 
-            service.
-                Setup(i => i.BaseUrl).
-                Returns(new Uri("http://sonarqube:9090"));
-
-            service.
-                Setup(i => i.GetAllProjectsAsync()).
-                Returns(Task.FromResult(new List<SonarQubeProject>()
-                {
-                    new SonarQubeProject() { Key = "A", Name = "A" }
-                }));
-
-            service.
-                Setup(i => i.GetProjectIssuesAsync(It.IsAny<string>())).
-                Returns(Task.FromResult(new List<SonarQubeIssue>()));
-
-            SonarService = service;
+            Client = new Mock<ISonarQubeClient>();
             ErrorSink = new StubTableDataSink();
 
             var table = new SonarLinkIssueDataSource();
             SubscribeToken = table.Subscribe(ErrorSink);
 
-            Model = new ProjectViewModel(teamExplorer.Object, table)
+            Model = new ProjectViewModel(teamExplorer.Object, table, projectPathsManager.Object)
             {
-                Service = SonarService.Object
+                Client = Client.Object
             };
         }
 
@@ -71,7 +56,7 @@ namespace SonarLink.TE.UnitTests.Tests
         /// <summary>
         /// Mock SonarQube WEB service
         /// </summary>
-        private Mock<ISonarQubeService> SonarService { get; set; }
+        private Mock<ISonarQubeClient> Client { get; set; }
 
         /// <summary>
         /// Error List sink
@@ -90,8 +75,9 @@ namespace SonarLink.TE.UnitTests.Tests
         [Test]
         public void ListProjectIssues()
         {
-            SonarService.
-                Setup(i => i.GetProjectIssuesAsync(It.Is<string>(value => value == "A"))).
+            var issuesClient = new Mock<IIssuesClient>();
+            issuesClient.
+                Setup(i => i.GetProjectIssues(It.IsAny<string>())).
                 Returns(Task.FromResult(new List<SonarQubeIssue>()
                 {
                     new SonarQubeIssue()
@@ -115,7 +101,9 @@ namespace SonarLink.TE.UnitTests.Tests
                     }
                 }));
 
-            Model.ItemSelectCommand.Execute(new SonarQubeProject(){ Key = "A", Name = "A" });
+            Client.SetupGet(i => i.Issues).Returns(issuesClient.Object);
+
+            Model.ItemSelectCommand.Execute(new SonarQubeProject() { Key = "A", Name = "A" });
 
             Assert.That(ErrorSink.Snapshots.Count, Is.EqualTo(2));
         }
@@ -126,7 +114,15 @@ namespace SonarLink.TE.UnitTests.Tests
         [Test]
         public void ListNonExistingProjectIssues()
         {
-            Model.ItemSelectCommand.Execute("Non-Existing-Project");
+            var issuesClient = new Mock<IIssuesClient>();
+            issuesClient.
+                Setup(i => i.GetProjectIssues(It.IsAny<string>())).
+                Returns(Task.FromResult(new List<SonarQubeIssue>()));
+
+            Client.SetupGet(i => i.Issues).Returns(issuesClient.Object);
+
+            Model.ItemSelectCommand.Execute(new SonarQubeProject() { Key = "A", Name = "A" });
+
             Assert.That(ErrorSink.Snapshots, Is.Empty);
         }
 
@@ -135,23 +131,26 @@ namespace SonarLink.TE.UnitTests.Tests
         /// </summary>
         /// <param name="filter">Project name filter</param>
         /// <returns>Project name listings following filtering</returns>
-        [TestCase("", Result = new string[] { "A", "ABCD", "BAAB", "CD", "EF" }, Description = "The empty filter is equivalent to 'accept all'")]
-        [TestCase("A", Result = new string[] { "A", "ABCD", "BAAB" })]
-        [TestCase("AB", Result = new string[] { "ABCD", "BAAB" })]
-        [TestCase("EFG", Result = new string[] { })]
-        [TestCase("1", Result = new string[] { }, Description = "It is not possible to filter via the project key")]
+        [TestCase("", ExpectedResult = new string[] { "A", "ABCD", "BAAB", "CD", "EF" }, Description = "The empty filter is equivalent to 'accept all'")]
+        [TestCase("A", ExpectedResult = new string[] { "A", "ABCD", "BAAB" })]
+        [TestCase("AB", ExpectedResult = new string[] { "ABCD", "BAAB" })]
+        [TestCase("EFG", ExpectedResult = new string[] { })]
+        [TestCase("1", ExpectedResult = new string[] { }, Description = "It is not possible to filter via the project key")]
         public IEnumerable<string> ProjectFilter(string filter)
         {
-            SonarService.
-                Setup(i => i.GetAllProjectsAsync()).
+            var componentsClient = new Mock<IComponentsClient>();
+            componentsClient.
+                Setup(i => i.GetAllProjects()).
                 Returns(Task.FromResult(new List<SonarQubeProject>()
                 {
-                    new SonarQubeProject() { Key = "1", Name = "A" },
-                    new SonarQubeProject() { Key = "2", Name = "ABCD" },
-                    new SonarQubeProject() { Key = "3", Name = "BAAB" },
-                    new SonarQubeProject() { Key = "4", Name = "CD" },
-                    new SonarQubeProject() { Key = "5", Name = "EF" },
+                        new SonarQubeProject() { Key = "1", Name = "A" },
+                        new SonarQubeProject() { Key = "2", Name = "ABCD" },
+                        new SonarQubeProject() { Key = "3", Name = "BAAB" },
+                        new SonarQubeProject() { Key = "4", Name = "CD" },
+                        new SonarQubeProject() { Key = "5", Name = "EF" },
                 }));
+
+            Client.SetupGet(i => i.Components).Returns(componentsClient.Object);
 
             Model.RefreshAsync().Wait();
 

@@ -1,8 +1,9 @@
 ﻿// (C) Copyright 2018 ETAS GmbH (http://www.etas.com/)
 
-using SonarLink.API.Services;
+using SonarLink.API.Clients;
 using SonarLink.TE.ErrorList;
 using SonarLink.TE.Utilities;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,20 +20,20 @@ namespace SonarLink.TE
         /// <summary>
         /// SonarQube server instance
         /// </summary>
-        private readonly ISonarQubeService _service;
+        private readonly ISonarQubeClient _client;
     
         /// <summary>
         /// Cache of previously download errors
         /// </summary>
-        private Dictionary<string, IEnumerable<ErrorListItem>> _cachedErrors = new Dictionary<string, IEnumerable<ErrorListItem>>();
+        private readonly Dictionary<string, IEnumerable<ErrorListItem>> _cachedErrors = new Dictionary<string, IEnumerable<ErrorListItem>>();
     
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="service">SonarQube server</param>
-        public ErrorListProvider(ISonarQubeService service)
+        public ErrorListProvider(ISonarQubeClient client)
         {
-            _service = service;
+            _client = client;
         }
     
         /// <summary>
@@ -49,8 +50,8 @@ namespace SonarLink.TE
     
             if (!_cachedErrors.TryGetValue(projectKey, out errors))
             {
-                var issues = await _service.GetProjectIssuesAsync(projectKey);
-                errors = issues.Select(issue => new ErrorListItem(_service, issue)).ToList();
+                var issues = await _client.Issues.GetProjectIssues(projectKey);
+                errors = issues.Select(issue => new ErrorListItem(new Uri("https://www.google.com/"), issue)).ToList();
                 _cachedErrors[projectKey] = errors;
             }
     

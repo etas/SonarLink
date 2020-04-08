@@ -31,16 +31,15 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="RestSharp, Version=106.4.1.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
-      <HintPath>..\packages\RestSharp.106.4.1\lib\net452\RestSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Web" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Net.Http" />
-  </ItemGroup>
-  <ItemGroup>
+    <Compile Include="Clients\ApiClient.cs" />
+    <Compile Include="Clients\AuthenticationClient.cs" />
+    <Compile Include="Clients\ComponentsClient.cs" />
+    <Compile Include="Clients\IAuthenticationClient.cs" />
+    <Compile Include="Clients\IComponentsClient.cs" />
+    <Compile Include="Clients\IIssuesClient.cs" />
+    <Compile Include="Clients\ISonarQubeClient.cs" />
+    <Compile Include="Clients\IssuesClient.cs" />
+    <Compile Include="Clients\SonarQubeClient.cs" />
     <Compile Include="Helpers\RestResponseHelper.cs" />
     <Compile Include="Models\ConnectionInformation.cs" />
     <Compile Include="Models\SonarQubeIssue.cs" />
@@ -52,11 +51,17 @@
     <Compile Include="Requests\PagedRequestBase.cs" />
     <Compile Include="Requests\RequestBase.cs" />
     <Compile Include="Requests\ValidateCredentialsRequest.cs" />
-    <Compile Include="Service\ISonarQubeService.cs" />
-    <Compile Include="Service\SonarQubeService.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="RestSharp, Version=106.4.0.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
+      <HintPath>..\packages\RestSharp.106.4.0\lib\net452\RestSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Web" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

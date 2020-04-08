@@ -169,56 +169,57 @@ namespace SonarLink.API.UnitTests
     
             return Create(new JsonSerializer().Serialize(jsonObj));
         }
-    
-       /// <summary>
-       /// Creates a response for a request to "api/issues/search" for a project which does not exist
-       /// </summary>
-       /// <returns>Response for "api/issues/search" for a project which does not exist</returns>
-       public static IRestResponse CreateGetIssues_ProjectDoesNotExistResponse()
+
+        /// <summary>
+        /// Creates a response for a request to "api/components/search" to search for 
+        /// projects and no projects exist.
+        /// </summary>
+        /// <returns>Response for a request to "api/components/search" for which no projects exist</returns>
+        public static IRestResponse CreateComponentsResponse_NoProjects()
         {
             var jsonObj = new
             {
                 total = 0,
                 p = 1,
                 ps = 500,
-    
+
                 paging = new
                 {
                     pageIndex = 1,
                     pageSize = 500,
                     total = 0
                 },
-    
-                issues = new string[] { },
+
                 components = new string[] { }
             };
-    
+
             return Create(new JsonSerializer().Serialize(jsonObj));
         }
-    
+
         /// <summary>
-        /// Creates a response for a request to "api/issues/search" for a project which does not have any issues
+        /// Creates a response for a request to "api/issues/search" to search for 
+        /// issues for a given project and no issues exist.
         /// </summary>
-        /// <returns>Response for "api/issues/search" for a project which does not have any issues</returns>
-        public static IRestResponse CreateGetIssues_ProjectHasNoIssuesResponse()
+        /// <returns>Response for a request to "api/issues/search" for which no issues exist.</returns>
+        public static IRestResponse CreateIssuesResponse_NoIssues()
         {
             var jsonObj = new
             {
                 total = 0,
                 p = 1,
                 ps = 500,
-    
+
                 paging = new
                 {
                     pageIndex = 1,
                     pageSize = 500,
                     total = 0
                 },
-    
+
                 issues = new string[] { },
                 components = new string[] { }
             };
-    
+
             return Create(new JsonSerializer().Serialize(jsonObj));
         }
     }

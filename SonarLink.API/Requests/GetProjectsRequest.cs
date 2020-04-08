@@ -7,7 +7,6 @@ using SonarLink.API.Models;
 
 namespace SonarLink.API.Requests
 {
-
     /// <summary>
     /// Request to get a list all projects on SonarQube.
     /// </summary>

@@ -4,6 +4,7 @@ using NUnit.Framework;
 using SonarLink.TE.Utilities;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace SonarLink.TE.UnitTests.Tests
 {
@@ -49,7 +50,7 @@ namespace SonarLink.TE.UnitTests.Tests
         ///              from within a directory hierarchy
         /// </summary>
         [Test]
-        public async void AsyncRecursiveDirectoryListing()
+        public async Task AsyncRecursiveDirectoryListing()
         {
             using (var a = TemporaryFile.CreateDirectory(Path.Combine(Path.GetTempPath(), "a")))
             using (var aa = TemporaryFile.CreateDirectory(Path.Combine(a.Path, "aa")))

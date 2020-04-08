@@ -1,7 +1,6 @@
 ﻿// (C) Copyright 2018 ETAS GmbH (http://www.etas.com/)
 
 using Microsoft.TeamFoundation.Controls;
-using SonarLink.API.Services;
 using SonarLink.API.Models;
 using SonarLink.TE.ErrorList;
 using SonarLink.TE.MVVM;
@@ -14,6 +13,7 @@ using System.Linq;
 using System.Windows.Data;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using SonarLink.API.Clients;
 
 namespace SonarLink.TE.ViewModel
 {
@@ -36,7 +36,7 @@ namespace SonarLink.TE.ViewModel
         /// <summary>
         /// SonarQube service/connection
         /// </summary>
-        private ISonarQubeService _service;
+        private ISonarQubeClient _client;
     
         /// <summary>
         /// ErrorList window provider
@@ -44,9 +44,9 @@ namespace SonarLink.TE.ViewModel
         private ErrorListProvider _errorListProvider;
 
         /// <summary>
-        /// Manages access to and persistence of the Sonar projects and local path associatons
+        /// Manages access to and persistence of the Sonar projects and local path associations
         /// </summary>
-        private readonly ProjectPathsManager _projectPathsManager = new ProjectPathsManager();
+        private readonly IProjectPathsManager _projectPathsManager;
     
         /// <summary>
         /// Command for associating Sonar project source code to a local path
@@ -63,11 +63,15 @@ namespace SonarLink.TE.ViewModel
         /// </summary>
         /// <param name="teamExplorer">TeamExplorer VS service</param>
         /// <param name="issuesDataSource">SonarQube issues data source</param>
-        public ProjectViewModel(ITeamExplorer teamExplorer, SonarLinkIssueDataSource issuesDataSource)
+        /// <param name="projectPathsManager">Project paths manager</param>
+        public ProjectViewModel(ITeamExplorer teamExplorer, 
+                                SonarLinkIssueDataSource issuesDataSource, 
+                                IProjectPathsManager projectPathsManager)
         {
             TeamExplorer = teamExplorer;
             ErrorTable = issuesDataSource;
-    
+            _projectPathsManager = projectPathsManager;
+
             // Bootstrap the projects view with an empty collection
             SonarProjects = Enumerable.Empty<SonarQubeProject>();
 
@@ -98,17 +102,17 @@ namespace SonarLink.TE.ViewModel
         /// <summary>
         /// SonarQube service/connection
         /// </summary>
-        public ISonarQubeService Service
+        public ISonarQubeClient Client
         {
             get
             {
-                return _service;
+                return _client;
             }
     
             set
             {
-                _service = value;
-                _errorListProvider = new ErrorListProvider(_service);
+                _client = value;
+                _errorListProvider = new ErrorListProvider(_client);
             }
         }
     
@@ -121,17 +125,13 @@ namespace SonarLink.TE.ViewModel
         /// (Cached) Listing of SonarQube projects
         /// </summary>
         private IEnumerable<SonarQubeProject> SonarProjects
-        {
-            get
-            {
-                return (IEnumerable<SonarQubeProject>) _projects.Source;
-            }
-    
+        {  
             set
             {
-                var view = new CollectionViewSource();
-    
-                view.Source = value ?? Enumerable.Empty<SonarQubeProject>();
+                var view = new CollectionViewSource
+                {
+                    Source = value ?? Enumerable.Empty<SonarQubeProject>()
+                };
                 view.Filter += ProjectsFilter;
     
                 _projects = view;
@@ -152,8 +152,7 @@ namespace SonarLink.TE.ViewModel
     
             if (!empty)
             {
-                var item = e.Item as SonarQubeProject;
-                e.Accepted = (item != null) && (item.Name.IndexOf(Filter, StringComparison.OrdinalIgnoreCase) >= 0);
+                e.Accepted = (e.Item is SonarQubeProject item) && (item.Name.IndexOf(Filter, StringComparison.OrdinalIgnoreCase) >= 0);
             }
         }
     
@@ -186,7 +185,7 @@ namespace SonarLink.TE.ViewModel
         /// <returns>Awaitable task to identify when all projects are loaded</returns>
         public async Task RefreshAsync()
         {
-            SonarProjects = await _service?.GetAllProjectsAsync();
+            SonarProjects = await _client?.Components.GetAllProjects();
         }
     
         /// <summary>
@@ -228,10 +227,10 @@ namespace SonarLink.TE.ViewModel
         /// <returns>Awaitable task which enumerates associated errors</returns>
         private async Task OnItemSelectAsync(SonarQubeProject project)
         {
-            _projectPathsManager.TryGetvalue(project.Key, out string projectLocalPath);
-    
-            var errors = Enumerable.Empty<ErrorListItem>();
-    
+            _projectPathsManager.TryGetValue(project.Key, out string projectLocalPath);
+
+            IEnumerable<ErrorListItem> errors;
+
             try
             {
                 errors = await _errorListProvider.GetErrorsAsync(project.Key, projectLocalPath);
@@ -240,10 +239,10 @@ namespace SonarLink.TE.ViewModel
             {
                 TeamExplorer.ShowNotification($"Failed to download issues for \"{project.Name}\".",
                         NotificationType.Error, NotificationFlags.None, null, SonarErrorsNotificationId);
-    
+
                 return;
             }
-    
+
             TeamExplorer.HideNotification(SonarErrorsNotificationId);
     
             if (errors.Any())

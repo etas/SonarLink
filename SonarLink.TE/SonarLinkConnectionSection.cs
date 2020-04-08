@@ -20,6 +20,16 @@ namespace SonarLink.TE
     public class SonarLinkConnectionSection : NotifyPropertyChangeSource, ITeamExplorerSection
     {
         /// <summary>
+        /// Visual Studio Team Explorer service.
+        /// </summary>
+        readonly ITeamExplorer _teamExplorer;
+
+        /// <summary>
+        /// Manages the configured <see cref="ISonarQubeClient"/> instances.
+        /// </summary>
+        readonly IClientManager _clientManager;
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <remarks>
@@ -27,31 +37,25 @@ namespace SonarLink.TE
         /// composition system instances which are part of the Visual Studio instance
         /// </remarks>
         /// <param name="serviceProvider">Visual Studio service provider</param>
-        /// <param name="connections">SonarQube connections</param>
+        /// <param name="clientManager">Manages the configured <see cref="ISonarQubeClient"/> instances.</param>
         [ImportingConstructor]
-        public SonarLinkConnectionSection([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider, IConnectionManager connections)
+        public SonarLinkConnectionSection([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider, IClientManager clientManager)
         {
-            var teamExplorer = serviceProvider.GetService(typeof(ITeamExplorer)) as ITeamExplorer;
-
-            SectionContent = new ConnectPageView()
-            {
-                DataContext = new ConnectPageViewModel(teamExplorer, connections)
-            };
-
-            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+            _teamExplorer = serviceProvider.GetService(typeof(ITeamExplorer)) as ITeamExplorer;
+            _clientManager = clientManager;
         }
 
         /// <summary>
         /// Property change handler primarily responsible for changing the busy state of the Team Explorer
-        /// page in case an attempt to establish a connection is ongoing.
+        /// page in case an attempt to sign in is ongoing.
         /// </summary>
         /// <param name="sender">Source command which triggered the event</param>
         /// <param name="e">Property changed event arguments</param>
         private void ViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(ViewModel.IsAttemptingToConnect))
+            if (e.PropertyName == nameof(ViewModel.IsSigningIn))
             {
-                IsBusy = ViewModel.IsAttemptingToConnect;
+                IsBusy = ViewModel.IsSigningIn;
             }
         }
 
@@ -64,12 +68,12 @@ namespace SonarLink.TE
         /// Section UI ViewModel
         /// </summary>
         private ConnectPageViewModel ViewModel => (ConnectPageViewModel)View.DataContext;
-
+               
         #region ITeamExplorerSection
 
         public string Title => "SonarLink";
 
-        public object SectionContent { get; }
+        public object SectionContent { get; private set; }
 
         /// <summary>
         /// Visibility status
@@ -145,6 +149,14 @@ namespace SonarLink.TE
 
         public void Initialize(object sender, SectionInitializeEventArgs e)
         {
+            _ = _clientManager.GetLoadedClientsAsync();
+
+            SectionContent = new ConnectPageView()
+            {
+                DataContext = new ConnectPageViewModel(_teamExplorer, _clientManager)
+            };
+
+            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
 
         public void Loaded(object sender, SectionLoadedEventArgs e)

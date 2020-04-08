@@ -3,7 +3,7 @@
 namespace SonarLink.TE.Utilities
 {
     /// <summary>
-    /// Manages access to and persistence of the Sonar projects and local path associatons
+    /// Manages access to and persistence of the Sonar projects and local path associations
     /// </summary>
     public interface IProjectPathsManager
     {
@@ -18,7 +18,8 @@ namespace SonarLink.TE.Utilities
         /// Gets the value associated with the specified key.
         /// </summary>
         /// <param name="project">Unique key associated with the Sonar project</param>
-        /// <param name="path">Local hint path associated with the spcified key, if the latter is found</param>
-        void TryGetvalue(string project, out string path);
+        /// <param name="path">Local hint path associated with the specified key, if the latter is found</param>
+        /// <returns>Retures true if key exists, false otherwise.</returns>
+        bool TryGetValue(string project, out string path);
     }
 }

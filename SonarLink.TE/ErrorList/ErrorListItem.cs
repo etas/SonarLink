@@ -2,7 +2,6 @@
 
 using Microsoft.VisualStudio.Shell.Interop;
 using SonarLink.API.Models;
-using SonarLink.API.Services;
 using System;
 using System.Globalization;
 using System.Linq;
@@ -27,7 +26,7 @@ namespace SonarLink.TE.ErrorList
         /// </summary>
         /// <param name="service">SonarQube source from which this issue originates</param>
         /// <param name="issue">SonarQube issue</param>
-        public ErrorListItem(ISonarQubeService service, SonarQubeIssue issue)
+        public ErrorListItem(Uri baseUrl, SonarQubeIssue issue)
             : this()
         {
             var errorCode = GetErrorCode(issue.Rule);
@@ -44,7 +43,7 @@ namespace SonarLink.TE.ErrorList
             ErrorCodeToolTip = GetErrorCodeToolTip(errorCode);
             ErrorCategory = GetErrorCategory(issue.Severity, issue.Type);
             Severity = __VSERRORCATEGORY.EC_MESSAGE;
-            HelpLink = GetHelpLink(service.BaseUrl, issue.Rule);
+            HelpLink = GetHelpLink(baseUrl, issue.Rule);
         }
     
         /// <summary>

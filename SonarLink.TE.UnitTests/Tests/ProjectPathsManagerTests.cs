@@ -1,6 +1,7 @@
 ﻿using Moq;
 using NUnit.Framework;
 using SonarLink.TE.Utilities;
+using SonarLink.TE.Utilities.Repository;
 using System.Collections.Generic;
 
 namespace SonarLink.TE.UnitTests.Tests
@@ -14,11 +15,13 @@ namespace SonarLink.TE.UnitTests.Tests
         [SetUp]
         public void TestSetup()
         {
-            Repository = new Mock<IProjectPathsDataRepository>();
+            Repository = new Mock<IRepository<ProjectPathsRepositoryItem>>();
 
-            var data = new ProjectPathData();
-            data.ProjectPaths = new Dictionary<string, string>();
-            data.ProjectPaths.Add("projectKey", "projectPath");
+            var data = new ProjectPathsRepositoryItem
+            {
+                ProjectToPathMap = new Dictionary<string, string>()
+            };
+            data.ProjectToPathMap.Add("projectKey", "projectPath");
 
             Repository.
                 Setup(i => i.Data).
@@ -35,16 +38,16 @@ namespace SonarLink.TE.UnitTests.Tests
         /// <summary>
         /// Mock project paths data repository 
         /// </summary>
-        private Mock<IProjectPathsDataRepository> Repository { get; set; }
+        private Mock<IRepository<ProjectPathsRepositoryItem>> Repository { get; set; }
 
         /// <summary>
         /// Assert that: New project and path pairs are correctly added and
         /// the repository's save method is invoked.
         /// </summary>
         [Test]
-        public void AddNewProjetPath()
+        public void AddNewProjectPath()
         {
-            var projectPaths = Repository.Object.Data.ProjectPaths;
+            var projectPaths = Repository.Object.Data.ProjectToPathMap;
             Assert.That(projectPaths.Count, Is.EqualTo(1));
 
             ProjectPathsManager.Add("newProjectKey", "newProjectPath");
@@ -61,13 +64,13 @@ namespace SonarLink.TE.UnitTests.Tests
         }
 
         /// <summary>
-        /// Assert that: In case of adding an already exsting project-path pair, the
+        /// Assert that: In case of adding an already existing project-path pair, the
         /// newly added pair overrides the already existing one.
         /// </summary>
         [Test]
         public void AddExistingProjectPath()
         {
-            var projectPaths = Repository.Object.Data.ProjectPaths;
+            var projectPaths = Repository.Object.Data.ProjectToPathMap;
             Assert.That(projectPaths.Count, Is.EqualTo(1));
 
             ProjectPathsManager.Add("projectKey", "newProjectPath");
@@ -81,12 +84,12 @@ namespace SonarLink.TE.UnitTests.Tests
 
         /// <summary>
         /// Assert that: In case of an invalid project or path value, the existing
-        /// data repositry is unchanged and the save method is not invoked.
+        /// data repository is unchanged and the save method is not invoked.
         /// </summary>
         [Test]
         public void AddInvalidProjectPath()
         {
-            var projectPaths = Repository.Object.Data.ProjectPaths;
+            var projectPaths = Repository.Object.Data.ProjectToPathMap;
             Assert.That(projectPaths.Count, Is.EqualTo(1));
 
             ProjectPathsManager.Add("newProjectKey", null);
@@ -101,18 +104,18 @@ namespace SonarLink.TE.UnitTests.Tests
         }
 
         /// <summary>
-        /// Assert that: The project path mananger returns the expected
+        /// Assert that: The project path manager returns the expected
         /// path given a valid and existing project key.
         /// </summary>
         [Test]
         public void ValidTryGetValue()
         {
-            ProjectPathsManager.TryGetvalue("projectKey", out string path);
+            ProjectPathsManager.TryGetValue("projectKey", out string path);
             Assert.That(path, Is.EqualTo("projectPath"));
         }
 
         /// <summary>
-        /// Assert that: The project path mananger returns a null
+        /// Assert that: The project path manager returns a null
         /// path given an invalid or non-existing project key.
         /// </summary>
         [TestCase(null)]
@@ -120,7 +123,7 @@ namespace SonarLink.TE.UnitTests.Tests
         [TestCase("newProjectKey")]
         public void InvalidTryGetValue(string project)
         {
-            ProjectPathsManager.TryGetvalue(project, out string path);
+            ProjectPathsManager.TryGetValue(project, out string path);
             Assert.That(path, Is.Null);
         }
     }

@@ -81,7 +81,7 @@
 
         <Grid>
             <TextBox x:Name="LoginInput" Style="{StaticResource TextBoxStyle}" Text="{Binding Login, UpdateSourceTrigger=PropertyChanged}"/>
-            <TextBlock Text="Login or Authentication token">
+            <TextBlock Text="Username or Authentication token">
                 <TextBlock.Style>
                     <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource HintText}">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -119,6 +119,6 @@
             </TextBlock>
         </Grid>
 
-        <ui:DialogButton Content="Connect" Width="75" Margin="6" Click="ConnectButtonClick" IsEnabled="{Binding IsServerUrlValid}"/>
+        <ui:DialogButton Content="Sign in" Width="75" Margin="6" Click="SignInButtonClick" IsEnabled="{Binding IsServerUrlValid}"/>
     </StackPanel>
 </ui:DialogWindow>

@@ -51,7 +51,7 @@ namespace SonarLink.TE
             if (!_cachedErrors.TryGetValue(projectKey, out errors))
             {
                 var issues = await _client.Issues.GetProjectIssues(projectKey);
-                errors = issues.Select(issue => new ErrorListItem(new Uri("https://www.google.com/"), issue)).ToList();
+                errors = issues.Select(issue => new ErrorListItem(_client.SonarQubeApiUrl, issue)).ToList();
                 _cachedErrors[projectKey] = errors;
             }
     

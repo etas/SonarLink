@@ -6,91 +6,14 @@ using NUnit.Framework;
 using SonarLink.API.Clients;
 using SonarLink.API.Models;
 using SonarLink.TE.ErrorList;
+using SonarLink.TE.UnitTests.Utilities;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace SonarLink.TE.UnitTests.Tests
 {
-    /// <summary>
-    /// Comparer for ErrorListItem instances
-    /// </summary>
-    class ErrorListItemComparer : IComparer<ErrorListItem>
-    {
-        #region IComparer<ErrorListItem>
-
-        /// <inheritdoc />
-        public int Compare(ErrorListItem x, ErrorListItem y)
-        {
-            if (Equals(x, y))
-            {
-                return 0;
-            }
-
-            if (x == null)
-            {
-                return 1;
-            }
-
-            if (y == null)
-            {
-                return -1;
-            }
-
-            int compare = x.ProjectName.CompareTo(y.ProjectName);
-            if (compare != 0)
-            {
-                return compare;
-            }
-
-            compare = x.FileName.CompareTo(y.FileName);
-            if (compare != 0)
-            {
-                return compare;
-            }
-
-            compare = x.Line.CompareTo(y.Line);
-            if (compare != 0)
-            {
-                return compare;
-            }
-
-            compare = x.Message.CompareTo(y.Message);
-            if (compare != 0)
-            {
-                return compare;
-            }
-
-            compare = x.ErrorCode.CompareTo(y.ErrorCode);
-            if (compare != 0)
-            {
-                return compare;
-            }
-
-            compare = x.ErrorCodeToolTip.CompareTo(y.ErrorCodeToolTip);
-            if (compare != 0)
-            {
-                return compare;
-            }
-
-            compare = x.ErrorCategory.CompareTo(y.ErrorCategory);
-            if (compare != 0)
-            {
-                return compare;
-            }
-
-            compare = x.Severity.CompareTo(y.Severity);
-            if (compare != 0)
-            {
-                return compare;
-            }
-
-            return compare;
-        }
-
-        #endregion
-    }
-
     [TestFixture]
     class ErrorListProviderTests
     {
@@ -151,6 +74,7 @@ namespace SonarLink.TE.UnitTests.Tests
             var client = new Mock<ISonarQubeClient>();
             client.SetupGet(i => i.Components).Returns(componentsClient.Object);
             client.SetupGet(i => i.Issues).Returns(issuesClient.Object);
+            client.SetupGet(i => i.SonarQubeApiUrl).Returns(new Uri("https://server.com/"));
 
             Provider = new ErrorListProvider(client.Object);
         }
@@ -191,7 +115,7 @@ namespace SonarLink.TE.UnitTests.Tests
                         ErrorCode = "QACPP2985",
                         ErrorCodeToolTip = "Get help for 'QACPP2985'",
                         ErrorCategory ="Minor Bug",
-                        Severity = __VSERRORCATEGORY.EC_MESSAGE
+                        Severity = __VSERRORCATEGORY.EC_ERROR
                     }
                 };
 
@@ -247,7 +171,7 @@ namespace SonarLink.TE.UnitTests.Tests
                             ErrorCode = "QACPP2985",
                             ErrorCodeToolTip = "Get help for 'QACPP2985'",
                             ErrorCategory ="Minor Bug",
-                            Severity = __VSERRORCATEGORY.EC_MESSAGE
+                            Severity = __VSERRORCATEGORY.EC_ERROR
                         }
                     };
 

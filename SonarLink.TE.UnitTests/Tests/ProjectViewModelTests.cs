@@ -28,6 +28,7 @@ namespace SonarLink.TE.UnitTests.Tests
             var projectPathsManager = new Mock<IProjectPathsManager>();
 
             Client = new Mock<ISonarQubeClient>();
+            Client.SetupGet(i => i.SonarQubeApiUrl).Returns(new Uri("https://server.com/"));
             ErrorSink = new StubTableDataSink();
 
             var table = new SonarLinkIssueDataSource();

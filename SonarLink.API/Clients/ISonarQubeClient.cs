@@ -1,5 +1,7 @@
 ﻿// (C) Copyright 2018 ETAS GmbH (http://www.etas.com/)
 
+using System;
+
 namespace SonarLink.API.Clients
 {
     /// <summary>
@@ -7,6 +9,11 @@ namespace SonarLink.API.Clients
     /// </summary>
     public interface ISonarQubeClient
     {
+        /// <summary>
+        /// The base address for the SonarQube API.
+        /// </summary>
+        Uri SonarQubeApiUrl { get; }
+
         /// <summary>
         /// Access SonarQube's Authentication API.
         /// </summary>

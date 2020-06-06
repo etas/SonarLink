@@ -32,5 +32,5 @@ SonarLink is an Open Source project and we are happy about any support. Join the
 
 ## License
 
-Copyright 2019 ETAS GmbH.
+Copyright 2018 ETAS GmbH.
 <br>Licensed under the MIT License

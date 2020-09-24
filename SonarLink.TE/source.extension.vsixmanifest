@@ -2,8 +2,9 @@
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
         <Identity Id="D5897BC3-2A52-47E0-AC45-724C03136480" Version="0.0.0.0" Language="en-US" Publisher="ETAS GmbH" />
-        <DisplayName>SonarLink</DisplayName>
-        <Description xml:space="preserve">Displays detected issues of SonarQube projects in Visual Studio 2019.</Description>
+        <DisplayName>SonarLink for Visual Studio 2019</DisplayName>
+        <Description xml:space="preserve">Displays detected issues of SonarQube projects in Visual Studio 2019. Universal solution that support all programming languages.</Description>
+        <Icon>icon.png</Icon>
     </Metadata>
     <Installation>
         <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[16.0, 17.0)" />

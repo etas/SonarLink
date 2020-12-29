@@ -21,12 +21,12 @@ namespace SonarLink.TE
         /// SonarQube server instance
         /// </summary>
         private readonly ISonarQubeClient _client;
-    
+
         /// <summary>
         /// Cache of previously download errors
         /// </summary>
         private readonly Dictionary<string, IEnumerable<ErrorListItem>> _cachedErrors = new Dictionary<string, IEnumerable<ErrorListItem>>();
-    
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -35,7 +35,7 @@ namespace SonarLink.TE
         {
             _client = client;
         }
-    
+
         /// <summary>
         /// Downloads SonarQube issues associated to the requested project. Issues are
         /// translated to 'Visual Studio' error items and get their source code file
@@ -47,19 +47,19 @@ namespace SonarLink.TE
         public async Task<IEnumerable<ErrorListItem>> GetErrorsAsync(string projectKey, string projectLocalPath)
         {
             IEnumerable<ErrorListItem> errors = Enumerable.Empty<ErrorListItem>();
-    
+
             if (!_cachedErrors.TryGetValue(projectKey, out errors))
             {
                 var issues = await _client.Issues.GetProjectIssues(projectKey);
                 errors = issues.Select(issue => new ErrorListItem(_client.SonarQubeApiUrl, issue)).ToList();
                 _cachedErrors[projectKey] = errors;
             }
-    
+
             if (!errors.Any())
             {
                 return errors;
             }
-    
+
             if (!Path.IsPathRooted(errors.First().FileName) && !string.IsNullOrEmpty(projectLocalPath))
             {
                 var directories = await DirectorySearcher.GetDirectoriesFastAsync(projectLocalPath);
@@ -73,10 +73,10 @@ namespace SonarLink.TE
                     });
                 }
             }
-    
+
             return errors;
         }
-    
+
         /// <summary>
         /// Attempts to find the best match directory which hosts the project content
         /// </summary>
@@ -86,16 +86,29 @@ namespace SonarLink.TE
         private string ResolveProjectRootPath(string projectPath, IEnumerable<DirectoryInfo> directories)
         {
             string projectDirectoryName = Path.GetDirectoryName(projectPath);
-    
-            var regexString = projectDirectoryName.Replace("\\", "\\\\");
+
+            const string dirSeperator = "\\";
+            const string dirSeperatorRegex = "\\\\"; // Regex.Escape(dirSeperator)
+
+            var regexString = projectDirectoryName.Replace(dirSeperator, dirSeperatorRegex);
             var regex = new Regex(regexString.ToString());
 
-            var directory = directories.FirstOrDefault(dir => regex.IsMatch(dir.FullName));
+            var directory = directories.Select(dir =>
+            {
+                var match = regex.Match(dir.FullName);
+                return new { Directory = dir, Index = (match.Success ? match.Index : int.MaxValue) };
+            }).
+            OrderBy(match => match.Index).
+            FirstOrDefault();
 
             if (directory != null)
             {
-                var index = directory.FullName.IndexOf(projectDirectoryName);
-                return directory.FullName.Substring(0, index);
+                var root = directory.Directory.FullName.Substring(0, directory.Index);
+                // Ensure that path is an exact match with a directory (avoid directory substring matches)
+                if ((root == string.Empty) || root.EndsWith(dirSeperator) || regexString.StartsWith(dirSeperator))
+                {
+                    return root;
+                }
             }
 
             return null;

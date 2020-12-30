@@ -146,7 +146,7 @@ namespace SonarLink.TE.UnitTests.Tests
             using (var a = TemporaryFile.CreateFile(Path.Combine(src.Path, "a.cpp")))
             using (var b = TemporaryFile.CreateFile(Path.Combine(src.Path, "b.cpp")))
             {
-                var errors = await Provider.GetErrorsAsync("A", git.Path);
+                var errors = await Provider.GetErrorsAsync("A", Path.GetTempPath());
 
                 var expected = new List<ErrorListItem>()
                     {
@@ -181,7 +181,8 @@ namespace SonarLink.TE.UnitTests.Tests
 
         /// <summary>
         /// Assert that: Errors from files with file paths with similar roots
-        ///              are enumerated correctly
+        ///              are enumerated correctly by simply using the local path
+        ///              as reference
         /// </summary>
         /// <remarks>https://github.com/etas/SonarLink/issues/31</remarks>
         [Test]
@@ -254,7 +255,7 @@ namespace SonarLink.TE.UnitTests.Tests
 
             var provider = new ErrorListProvider(client.Object);
 
-            using (var root = TemporaryFile.CreateDirectory(Path.Combine(Path.GetTempPath(), "root"), true))
+            using (var root = TemporaryFile.CreateDirectory(Path.Combine(Path.GetTempPath(), "root")))
             using (var serviceA = TemporaryFile.CreateDirectory(Path.Combine(root.Path, "AService")))
             using (var serviceAImpl = TemporaryFile.CreateFile(Path.Combine(serviceA.Path, "Implementation.cs")))
             using (var serviceB = TemporaryFile.CreateDirectory(Path.Combine(root.Path, "BService")))
@@ -322,8 +323,8 @@ namespace SonarLink.TE.UnitTests.Tests
         }
 
         /// <summary>
-        /// Assert that: Errors from files with file paths with similar roots
-        ///              are enumerated correctly
+        /// Assert that: File paths may be incorrectly resolved in case the
+        ///              root folder does not host the file in question
         /// </summary>
         /// <remarks>https://github.com/etas/SonarLink/issues/31</remarks>
         [Test]
@@ -366,7 +367,7 @@ namespace SonarLink.TE.UnitTests.Tests
 
             var provider = new ErrorListProvider(client.Object);
 
-            using (var root = TemporaryFile.CreateDirectory(Path.Combine(Path.GetTempPath(), "root"), true))
+            using (var root = TemporaryFile.CreateDirectory(Path.Combine(Path.GetTempPath(), "root")))
             using (var serviceA = TemporaryFile.CreateDirectory(Path.Combine(root.Path, "AService")))
             using (var serviceAImpl = TemporaryFile.CreateFile(Path.Combine(serviceA.Path, "Implementation.cs")))
             {
@@ -376,8 +377,8 @@ namespace SonarLink.TE.UnitTests.Tests
                         new ErrorListItem()
                         {
                             ProjectName = "",
-                            // Path is not fully resolved
-                            FileName = "Service\\Implementation.cs",
+                            // Path resolved incorrectly
+                            FileName = Path.Combine(root.Path, "Service\\Implementation.cs"),
                             Line = 181,
                             Message = "Service/Implementation.cs",
                             ErrorCode = "QACPP3030",

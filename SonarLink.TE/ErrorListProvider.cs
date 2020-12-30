@@ -2,12 +2,9 @@
 
 using SonarLink.API.Clients;
 using SonarLink.TE.ErrorList;
-using SonarLink.TE.Utilities;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace SonarLink.TE
@@ -55,63 +52,19 @@ namespace SonarLink.TE
                 _cachedErrors[projectKey] = errors;
             }
 
-            if (!errors.Any())
+            if (!string.IsNullOrEmpty(projectLocalPath) && (errors.Any() && !Path.IsPathRooted(errors.First().FileName)))
             {
-                return errors;
-            }
+                var pathRewrite = errors.ToList();
 
-            if (!Path.IsPathRooted(errors.First().FileName) && !string.IsNullOrEmpty(projectLocalPath))
-            {
-                var directories = await DirectorySearcher.GetDirectoriesFastAsync(projectLocalPath);
-                var projectRootPath = ResolveProjectRootPath(errors.First().FileName, directories);
-                if (!string.IsNullOrEmpty(projectRootPath))
+                pathRewrite.ForEach(x =>
                 {
-                    errors.ToList().ForEach(x =>
-                    {
-                        string cleanFilePath = x.FileName.Split(':').Last();
-                        x.FileName = projectRootPath + cleanFilePath;
-                    });
-                }
+                    x.FileName = Path.Combine(projectLocalPath, x.FileName);
+                });
+
+                errors = pathRewrite;
             }
 
             return errors;
-        }
-
-        /// <summary>
-        /// Attempts to find the best match directory which hosts the project content
-        /// </summary>
-        /// <param name="projectPath">Project directory path (as stated by SonarQube)</param>
-        /// <param name="directories">Set of directories which should be tested for validity</param>
-        /// <returns>A resolved project path or null if it cannot be resolved</returns>
-        private string ResolveProjectRootPath(string projectPath, IEnumerable<DirectoryInfo> directories)
-        {
-            string projectDirectoryName = Path.GetDirectoryName(projectPath);
-
-            const string dirSeperator = "\\";
-            const string dirSeperatorRegex = "\\\\"; // Regex.Escape(dirSeperator)
-
-            var regexString = projectDirectoryName.Replace(dirSeperator, dirSeperatorRegex);
-            var regex = new Regex(regexString.ToString());
-
-            var directory = directories.Select(dir =>
-            {
-                var match = regex.Match(dir.FullName);
-                return new { Directory = dir, Index = (match.Success ? match.Index : int.MaxValue) };
-            }).
-            OrderBy(match => match.Index).
-            FirstOrDefault();
-
-            if (directory != null)
-            {
-                var root = directory.Directory.FullName.Substring(0, directory.Index);
-                // Ensure that path is an exact match with a directory (avoid directory substring matches)
-                if ((root == string.Empty) || root.EndsWith(dirSeperator) || regexString.StartsWith(dirSeperator))
-                {
-                    return root;
-                }
-            }
-
-            return null;
         }
     }
 

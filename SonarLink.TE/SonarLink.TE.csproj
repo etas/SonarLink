@@ -75,7 +75,6 @@
     <Compile Include="SonarLinkProjectPage.cs" />
     <Compile Include="Utilities\CredentialsManager\CredentialsManager.cs" />
     <Compile Include="Utilities\CredentialsManager\ICredentialsManager.cs" />
-    <Compile Include="Utilities\DirectorySearcher.cs" />
     <Compile Include="Utilities\FolderSelectDialog.cs" />
     <Compile Include="Utilities\LoginManager\ILoginManager.cs" />
     <Compile Include="Utilities\LoginManager\LoginManager.cs" />

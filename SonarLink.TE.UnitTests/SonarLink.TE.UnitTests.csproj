@@ -44,7 +44,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tests\ClientManagerTests.cs" />
     <Compile Include="Tests\ConnectionInfoDialogViewModelTests.cs" />
-    <Compile Include="Tests\DirectorySearcherTests.cs" />
     <Compile Include="Tests\IssueCategoriesTests.cs" />
     <Compile Include="Tests\ProjectPathsDataRepositoryTests.cs" />
     <Compile Include="Tests\ProjectPathsManagerTests.cs" />

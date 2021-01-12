@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using SonarLink.API.Models;
 using System;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 
 namespace SonarLink.TE.ErrorList
@@ -101,7 +102,7 @@ namespace SonarLink.TE.ErrorList
         private static string GetFileName(string fileName)
         {
             var cleanFileName = fileName.Split(':').LastOrDefault();
-            return cleanFileName.Replace("/", "\\");
+            return cleanFileName.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
         }
 
         /// <summary>

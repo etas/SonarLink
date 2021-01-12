@@ -38,7 +38,7 @@ namespace SonarLink.TE.UnitTests
         /// <param name="path">The path to the temporary file</param>
         public static TemporaryFile CreateFile(string path)
         {
-            System.IO.File.Create(path);
+            System.IO.File.Create(path).Close();
             return File(path);
         }
 
@@ -46,13 +46,20 @@ namespace SonarLink.TE.UnitTests
         /// Temporary Directory
         /// </summary>
         /// <param name="path">The path to the temporary directory</param>
-        public static TemporaryFile Directory(string path)
+        /// <param name="recursive">Flag which determines whether deletion is recursive</param>
+        public static TemporaryFile Directory(string path, bool recursive = false)
         {
+            Action<string> deleter = System.IO.Directory.Delete;
+            if (recursive)
+            {
+                deleter = (x) => System.IO.Directory.Delete(x, true);
+            }
+
             return new TemporaryFile()
             {
                 Path = path,
                 Tester = System.IO.Directory.Exists,
-                Deleter = System.IO.Directory.Delete
+                Deleter = deleter
             };
         }
 
@@ -60,10 +67,11 @@ namespace SonarLink.TE.UnitTests
         /// Creates a new Temporary Directory
         /// </summary>
         /// <param name="path">The path to the temporary directory</param>
-        public static TemporaryFile CreateDirectory(string path)
+        /// <param name="recursive">Flag which determines whether deletion is recursive</param>
+        public static TemporaryFile CreateDirectory(string path, bool recursive = false)
         {
             System.IO.Directory.CreateDirectory(path);
-            return Directory(path);
+            return Directory(path, recursive);
         }
 
         /// <summary>
@@ -74,7 +82,7 @@ namespace SonarLink.TE.UnitTests
         private bool Delete()
         {
             try
-            { 
+            {
                 if ((Path != null) && Tester(Path))
                 {
                     Deleter(Path);
@@ -83,12 +91,12 @@ namespace SonarLink.TE.UnitTests
             }
             catch (Exception)
             {
-				// Silence Exception
+                // Silence Exception
             }
 
             return false;
         }
-        
+
         /// <summary>
         /// Temporary file path
         /// </summary>
@@ -116,7 +124,7 @@ namespace SonarLink.TE.UnitTests
         }
 
         #region IDisposable
-        
+
         protected virtual void Dispose(bool disposing)
         {
             if (!string.IsNullOrEmpty(Path))

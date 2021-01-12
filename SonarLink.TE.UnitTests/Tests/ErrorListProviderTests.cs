@@ -146,7 +146,7 @@ namespace SonarLink.TE.UnitTests.Tests
             using (var a = TemporaryFile.CreateFile(Path.Combine(src.Path, "a.cpp")))
             using (var b = TemporaryFile.CreateFile(Path.Combine(src.Path, "b.cpp")))
             {
-                var errors = await Provider.GetErrorsAsync("A", git.Path);
+                var errors = await Provider.GetErrorsAsync("A", Path.GetTempPath());
 
                 var expected = new List<ErrorListItem>()
                     {
@@ -174,6 +174,219 @@ namespace SonarLink.TE.UnitTests.Tests
                             Severity = __VSERRORCATEGORY.EC_ERROR
                         }
                     };
+
+                Assert.That(errors, Is.EqualTo(expected).Using(new ErrorListItemComparer()));
+            }
+        }
+
+        /// <summary>
+        /// Assert that: Errors from files with file paths with similar roots
+        ///              are enumerated correctly by simply using the local path
+        ///              as reference
+        /// </summary>
+        /// <remarks>https://github.com/etas/SonarLink/issues/31</remarks>
+        [Test]
+        public async Task SubstringRootPath()
+        {
+            const string serviceKey = "MultiService";
+
+            var componentsClient = new Mock<IComponentsClient>();
+            componentsClient.
+                Setup(i => i.GetAllProjects()).
+                Returns(Task.FromResult(new List<SonarQubeProject>()
+                {
+                    new SonarQubeProject()
+                    {
+                        Key = serviceKey,
+                        Name = "Project MultiService"
+                    }
+                }));
+
+            var issuesClient = new Mock<IIssuesClient>();
+            issuesClient.
+                Setup(i => i.GetProjectIssues(It.Is<string>(key => key == serviceKey))).
+                Returns(Task.FromResult(new List<SonarQubeIssue>()
+                {
+                    new SonarQubeIssue()
+                    {
+                        Rule = "other:QACPP.3030",
+                        Severity = "INFO",
+                        Component = "serviceKey:Service/Implementation.cs",
+                        Line = 182,
+                        Message = "QACPP[1:3030]  Service/Implementation.cs",
+                        Type ="VULNERABILITY"
+                    },
+
+                    new SonarQubeIssue()
+                    {
+                        Rule = "other:QACPP.3030",
+                        Severity = "INFO",
+                        Component = "serviceKey:AService/Implementation.cs",
+                        Line = 182,
+                        Message = "QACPP[1:3030]  AService/Implementation.cs",
+                        Type ="VULNERABILITY"
+                    },
+
+                    new SonarQubeIssue()
+                    {
+                        Rule = "other:QACPP.3030",
+                        Severity = "INFO",
+                        Component = "serviceKey:BService/Implementation.cs",
+                        Line = 182,
+                        Message = "QACPP[1:3030]  BService/Implementation.cs",
+                        Type ="VULNERABILITY"
+                    },
+                    new
+                    SonarQubeIssue()
+                    {
+                        Rule = "other:QACPP.3030",
+                        Severity = "INFO",
+                        Component = "serviceKey:Service/Service/Implementation.cs",
+                        Line = 182,
+                        Message = "QACPP[1:3030]  Service/Service/Implementation.cs",
+                        Type ="VULNERABILITY"
+                    },
+                }));
+
+            var client = new Mock<ISonarQubeClient>();
+            client.SetupGet(i => i.Components).Returns(componentsClient.Object);
+            client.SetupGet(i => i.Issues).Returns(issuesClient.Object);
+            client.SetupGet(i => i.SonarQubeApiUrl).Returns(new Uri("https://server.com/"));
+
+            var provider = new ErrorListProvider(client.Object);
+
+            using (var root = TemporaryFile.CreateDirectory(Path.Combine(Path.GetTempPath(), "root")))
+            using (var serviceA = TemporaryFile.CreateDirectory(Path.Combine(root.Path, "AService")))
+            using (var serviceAImpl = TemporaryFile.CreateFile(Path.Combine(serviceA.Path, "Implementation.cs")))
+            using (var serviceB = TemporaryFile.CreateDirectory(Path.Combine(root.Path, "BService")))
+            using (var serviceBImpl = TemporaryFile.CreateFile(Path.Combine(serviceB.Path, "Implementation.cs")))
+            using (var service = TemporaryFile.CreateDirectory(Path.Combine(root.Path, "Service")))
+            using (var serviceImpl = TemporaryFile.CreateFile(Path.Combine(service.Path, "Implementation.cs")))
+            using (var serviceService = TemporaryFile.CreateDirectory(Path.Combine(service.Path, "Service")))
+            using (var serviceServiceImpl = TemporaryFile.CreateFile(Path.Combine(serviceService.Path, "Implementation.cs")))
+            {
+                var errors = await provider.GetErrorsAsync(serviceKey, root.Path);
+
+                var expected = new List<ErrorListItem>()
+                    {
+                        new ErrorListItem()
+                        {
+                            ProjectName = "",
+                            FileName = serviceImpl.Path,
+                            Line = 181,
+                            Message = "Service/Implementation.cs",
+                            ErrorCode = "QACPP3030",
+                            ErrorCodeToolTip = "Get help for 'QACPP3030'",
+                            ErrorCategory = "Vulnerability",
+                            Severity = __VSERRORCATEGORY.EC_MESSAGE
+                        },
+
+                        new ErrorListItem()
+                        {
+                            ProjectName = "",
+                            FileName = serviceAImpl.Path,
+                            Line = 181,
+                            Message = "AService/Implementation.cs",
+                            ErrorCode = "QACPP3030",
+                            ErrorCodeToolTip = "Get help for 'QACPP3030'",
+                            ErrorCategory = "Vulnerability",
+                            Severity = __VSERRORCATEGORY.EC_MESSAGE
+                        },
+
+                        new ErrorListItem()
+                        {
+                            ProjectName = "",
+                            FileName = serviceBImpl.Path,
+                            Line = 181,
+                            Message = "BService/Implementation.cs",
+                            ErrorCode = "QACPP3030",
+                            ErrorCodeToolTip = "Get help for 'QACPP3030'",
+                            ErrorCategory = "Vulnerability",
+                            Severity = __VSERRORCATEGORY.EC_MESSAGE
+                        },
+
+                        new ErrorListItem()
+                        {
+                            ProjectName = "",
+                            FileName = serviceServiceImpl.Path,
+                            Line = 181,
+                            Message = "Service/Service/Implementation.cs",
+                            ErrorCode = "QACPP3030",
+                            ErrorCodeToolTip = "Get help for 'QACPP3030'",
+                            ErrorCategory = "Vulnerability",
+                            Severity = __VSERRORCATEGORY.EC_MESSAGE
+                        }
+                    };
+
+                Assert.That(errors, Is.EqualTo(expected).Using(new ErrorListItemComparer()));
+            }
+        }
+
+        /// <summary>
+        /// Assert that: File paths may be incorrectly resolved in case the
+        ///              root folder does not host the file in question
+        /// </summary>
+        /// <remarks>https://github.com/etas/SonarLink/issues/31</remarks>
+        [Test]
+        public async Task InvalidSubstringRootPath()
+        {
+            const string serviceKey = "MultiService";
+
+            var componentsClient = new Mock<IComponentsClient>();
+            componentsClient.
+                Setup(i => i.GetAllProjects()).
+                Returns(Task.FromResult(new List<SonarQubeProject>()
+                {
+                    new SonarQubeProject()
+                    {
+                        Key = serviceKey,
+                        Name = "Project MultiService"
+                    }
+                }));
+
+            var issuesClient = new Mock<IIssuesClient>();
+            issuesClient.
+                Setup(i => i.GetProjectIssues(It.Is<string>(key => key == serviceKey))).
+                Returns(Task.FromResult(new List<SonarQubeIssue>()
+                {
+                    new SonarQubeIssue()
+                    {
+                        Rule = "other:QACPP.3030",
+                        Severity = "INFO",
+                        Component = "serviceKey:Service/Implementation.cs",
+                        Line = 182,
+                        Message = "QACPP[1:3030]  Service/Implementation.cs",
+                        Type ="VULNERABILITY"
+                    }
+                }));
+
+            var client = new Mock<ISonarQubeClient>();
+            client.SetupGet(i => i.Components).Returns(componentsClient.Object);
+            client.SetupGet(i => i.Issues).Returns(issuesClient.Object);
+            client.SetupGet(i => i.SonarQubeApiUrl).Returns(new Uri("https://server.com/"));
+
+            var provider = new ErrorListProvider(client.Object);
+
+            using (var root = TemporaryFile.CreateDirectory(Path.Combine(Path.GetTempPath(), "root")))
+            using (var serviceA = TemporaryFile.CreateDirectory(Path.Combine(root.Path, "AService")))
+            using (var serviceAImpl = TemporaryFile.CreateFile(Path.Combine(serviceA.Path, "Implementation.cs")))
+            {
+                var errors = await provider.GetErrorsAsync(serviceKey, root.Path);
+                var expected = new List<ErrorListItem>()
+                    {
+                        new ErrorListItem()
+                        {
+                            ProjectName = "",
+                            // Path resolved incorrectly
+                            FileName = Path.Combine(root.Path, "Service\\Implementation.cs"),
+                            Line = 181,
+                            Message = "Service/Implementation.cs",
+                            ErrorCode = "QACPP3030",
+                            ErrorCodeToolTip = "Get help for 'QACPP3030'",
+                            ErrorCategory = "Vulnerability",
+                            Severity = __VSERRORCATEGORY.EC_MESSAGE
+                        },
+                };
 
                 Assert.That(errors, Is.EqualTo(expected).Using(new ErrorListItemComparer()));
             }
